@@ -1,0 +1,24 @@
+{
+  "name": "ten-oota-ten",
+  "version": "1.0.0",
+  "description": "Overtake Daniel on the A970. Properly.",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "bake": "node scripts/bake.mjs",
+    "test": "node scripts/test-scoring.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "pngjs": "^7.0.0",
+    "vite": "^8.3.2"
+  },
+  "private": true
+}

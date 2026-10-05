@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#1b1d1f" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Ccircle cx=%2232%22 cy=%2232%22 r=%2230%22 fill=%22%23f5cf1d%22 stroke=%22%2316140f%22 stroke-width=%224%22/%3E%3Ctext x=%2232%22 y=%2242%22 font-size=%2228%22 font-weight=%22900%22 text-anchor=%22middle%22 font-family=%22Arial Black%22%3E10%3C/text%3E%3C/svg%3E" />
+    <meta name="description" content="Overtake Daniel on the A970 through Cunningsburgh. Properly. He'll rate you out of ten." />
+    <title>10 Oota 10</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="gl"></canvas>
+
+      <!-- HUD -->
+      <div id="hud" hidden>
+        <div class="hud-top">
+          <div class="progress">
+            <div class="progress-labels"><span>Aithsetter</span><span id="progress-count">0 / 4</span><span>Mousa lay-by</span></div>
+            <div class="progress-bar"><div id="progress-fill"></div><div id="progress-dots"></div></div>
+          </div>
+          <div class="hud-buttons">
+            <button class="icon-btn" data-action="camera" aria-label="Switch camera">
+              <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="icon-btn" data-action="mute" aria-label="Mute">
+              <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path data-wave d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="icon-btn" data-action="pause" aria-label="Pause">
+              <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="dash">
+          <div class="ind ind-left" id="ind-left"><svg viewBox="0 0 24 24"><path d="M10 5 3 12l7 7v-4.5h11v-5H10z"/></svg></div>
+          <div class="speedo">
+            <div class="speed"><span id="speed">0</span><small>mph</small></div>
+            <div class="limit" id="limit">60</div>
+          </div>
+          <div class="ind ind-right" id="ind-right"><svg viewBox="0 0 24 24"><path d="M14 5l7 7-7 7v-4.5H3v-5h11z"/></svg></div>
+        </div>
+
+        <div class="chips">
+          <div class="chip phase" id="phase-chip" hidden></div>
+          <div class="chip hazard" id="hazard-chip" hidden></div>
+          <div class="chip gap" id="gap-chip" hidden></div>
+          <div class="chip gust" id="gust-chip" hidden>
+            <svg viewBox="0 0 24 24"><path d="M3 9h11a3 3 0 1 0-3-3M3 13h15a3 3 0 1 1-3 3M3 17h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Gust
+          </div>
+        </div>
+
+        <div class="clearance" id="clearance" hidden>
+          <div class="clearance-head"><span>Clearance</span><b id="clearance-val">0.0m</b></div>
+          <div class="clearance-bar">
+            <div class="clearance-fill" id="clearance-fill"></div>
+            <div class="clearance-need" id="clearance-need"></div>
+          </div>
+          <div class="clearance-foot" id="clearance-foot">needs 1.5m</div>
+        </div>
+
+        <div class="toast" id="toast" hidden></div>
+        <div class="key-hint" id="key-hint">W/S pedals · A/D steer · Q/E indicators · C camera</div>
+      </div>
+
+      <!-- Touch controls -->
+      <div id="touch" hidden>
+        <div class="touch-left">
+          <div class="ind-buttons">
+            <button class="ind-btn" data-ind="left" aria-label="Left indicator"><svg viewBox="0 0 24 24"><path d="M10 5 3 12l7 7v-4.5h11v-5H10z"/></svg></button>
+            <button class="ind-btn" data-ind="right" aria-label="Right indicator"><svg viewBox="0 0 24 24"><path d="M14 5l7 7-7 7v-4.5H3v-5h11z"/></svg></button>
+          </div>
+          <div class="steer" data-steer>
+            <div class="steer-track"></div>
+            <div class="steer-knob" data-knob></div>
+          </div>
+        </div>
+        <div class="touch-right">
+          <button class="horn-btn" data-horn aria-label="Horn">Horn</button>
+          <div class="pedals">
+            <button class="pedal brake" data-brake aria-label="Brake">Brake</button>
+            <button class="pedal gas" data-gas aria-label="Accelerate">Gas</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div class="screen" id="screen-loading">
+        <div class="loading">Loading the A970…</div>
+      </div>
+
+      <!-- Title -->
+      <div class="screen title-screen" id="screen-title" hidden>
+        <div class="title-inner">
+          <div class="title-avatar" id="title-avatar"></div>
+          <h1 class="badge-text">10 oota 10</h1>
+          <p class="tagline">Overtake Daniel on the A970 through Cunningsburgh.<br />Properly. He's rating you.</p>
+          <div class="title-actions">
+            <button class="btn primary" data-action="start-daily">Drive today's road</button>
+            <button class="btn" data-action="start-random">Random traffic</button>
+          </div>
+          <div class="pb" id="title-pb"></div>
+          <details class="howto">
+            <summary>How to get a 10</summary>
+            <ol>
+              <li>Hang back: 2+ seconds behind him. No horn.</li>
+              <li>Right indicator on for <b>3 seconds</b> before you move out.</li>
+              <li>Only go when it's clear: no oncoming, no bends, crests, solid lines, junctions or bus stops.</li>
+              <li>Give him <b>1.5m</b> (2m+ above 50mph). Don't crawl, don't blast.</li>
+              <li>Left indicator on <b>before</b> you move back in.</li>
+              <li>Move in only when he's well behind (a car length and more).</li>
+              <li>Cancel your indicator. Nothing auto-cancels.</li>
+              <li>Smooth hands, smooth feet, the whole way.</li>
+            </ol>
+            <p class="controls-desktop">Keyboard: <b>W/S</b> or arrows for pedals (pressure builds as you hold), <b>A/D</b> to steer, <b>Q/E</b> indicators (press again to cancel), <b>H</b> horn, <b>C</b> camera, <b>P</b> pause.</p>
+            <p class="controls-touch">Touch: slide the steering bar, hold Gas/Brake (pressure builds), tap the arrows to indicate and tap again to cancel.</p>
+          </details>
+          <p class="credit">Map data © OpenStreetMap contributors. Elevation: Terrarium/AWS.</p>
+        </div>
+      </div>
+
+      <!-- Rating card -->
+      <div class="screen card-screen" id="card" hidden>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-avatar" id="card-avatar"></div>
+            <div class="card-who"><b>Daniel</b><span id="card-sub">Overtake 1</span></div>
+          </div>
+          <div class="card-score" id="card-score">7<small>/10</small></div>
+          <div class="caption" id="card-quip">…</div>
+          <ul class="breakdown" id="card-breakdown"></ul>
+          <button class="btn primary" data-action="card-continue">Keep driving</button>
+        </div>
+      </div>
+
+      <!-- Pause -->
+      <div class="screen" id="screen-pause" hidden>
+        <div class="panel">
+          <h2>Paused</h2>
+          <button class="btn primary" data-action="resume">Resume</button>
+          <button class="btn" data-action="quit">Quit to title</button>
+        </div>
+      </div>
+
+      <!-- End -->
+      <div class="screen end-screen" id="screen-end" hidden>
+        <div class="end-inner">
+          <h2>Daniel's made it to the lay-by</h2>
+          <div class="end-stats" id="end-stats"></div>
+          <div class="end-best" id="end-best"></div>
+          <div class="share-preview" id="share-preview"></div>
+          <div class="end-actions">
+            <button class="btn primary" data-action="share">Share your score</button>
+            <button class="btn" data-action="again-same">Same traffic again</button>
+            <button class="btn" data-action="again-new">New run</button>
+            <button class="btn ghost" data-action="quit">Title</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="rotate-hint" id="rotate-hint">Tip: landscape gives you more road.</div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
