@@ -4,6 +4,8 @@
 
 Live: https://shetlandj.github.io/ten-oota-ten/ (deployed by `.github/workflows/pages.yml` on every push to `main`; the workflow runs `npm test` first).
 
+James plays and shares the live site, so "done" means pushed to `main` and deployed: commit, push, then confirm with `gh run list -R ShetlandJ/ten-oota-ten --limit 1` (a deploy takes about a minute).
+
 ## Commands
 
 ```bash
@@ -23,6 +25,7 @@ Run `npm test` after touching anything in `src/scoring/`, `src/vehicles/player.j
 - UK, so we drive on the left: own lane centre `d = -1.65` (`OWN_LANE`), oncoming lane `+1.65`. Daniel rides at `d = -2.35`.
 - Right-hand normal for tangent `(tx, tz)` is `(-tz, tx)`. `road.pos(s, d)` / `road.frame(s)` do this; use them rather than recomputing.
 - All models face **+z**; `rotation.y = heading` where `heading = atan2(tx, tz)`. Oncoming vehicles add `Math.PI`.
+- Yaw from sideways movement is **subtracted**: `rotation.y = heading - atan2(vd, v)`. Adding it makes the car slide right with its nose pointing left (it looked like it was reversing out).
 - Terrain triangulation splits each cell along the (c, r+1)–(c+1, r) diagonal. `Terrain.heightAt` and `gridTriangle` in `scripts/bake.mjs` must stay identical, or objects float/sink and the bake's "no terrain poking through the asphalt" pass breaks.
 
 ## Architecture
@@ -40,9 +43,11 @@ Run `npm test` after touching anything in `src/scoring/`, `src/vehicles/player.j
 - `PCFSoftShadowMap` was removed in this three.js version; use `PCFShadowMap`.
 - Player steering is deliberately ramped so steady keyboard input stays under the 3.6 m/s² harsh-steer threshold. Only flicking left-right or fast touch swipes count as harsh. Changing `STEER_RAMP`/`STEER_RETURN`/`vdMax` in `player.js` changes smoothness scoring.
 - Indicators never auto-cancel. Same key toggles off; the other side switches over.
+- The keyboard legend (`#key-hint` in `index.html`) and the Q/E badges on the HUD arrows are always on screen on desktop. Update them if you change bindings in `input/input.js`.
 - `public/audio/ten-oota-ten.{mp3,m4a,wav,ogg}` is an optional voice clip of Daniel played on a perfect 10. Until James adds it, four 404s in the console are expected.
 - Touching Daniel never knocks him over: `Game._bonk` freezes the sim and shows the comic pop-up (`ui/bonk.js`), scores 0, then drops him 30m behind the car. This is deliberate (he's real and the game goes to his followers). Head-on crashes with oncoming traffic still get the slow-mo.
 - `public/audio/right-of-way.mp3` loops on the title/end screens via `audio.playMusic`. Browsers block audio until a user gesture, so the page opens on a "Tap to start" splash whose tap unlocks audio; starting a drive fades the song out over 2.5s.
+- In `audio.js`, `stopMusic` cancels any pending `playMusic`; `_endMusic` only fades what's playing. Switching tracks inside `playMusic` must use `_endMusic`, otherwise a queued "fade out once driving" request gets silently dropped (this happened).
 - `CATCHPHRASES` in `src/scoring/quips.js` are placeholders lifted from Daniel's posts; James may supply real ones.
 
 ## Debugging
@@ -50,6 +55,7 @@ Run `npm test` after touching anything in `src/scoring/`, `src/vehicles/player.j
 - `window.__game` exposes the game (player, traffic, active encounter, tracker via `active.tracker.raw`).
 - `__game.debugCam = true` stops the game moving the camera so you can position it manually.
 - Teleporting: set `__game.player.s` / `.d` / `.v`; use `__game.road.hazardWithin(s, dist)` to find clear stretches (the longest is ~300m).
+- Browser automation: the title only appears after the splash is tapped. Playwright refuses to click the pulsing `#splash-start` ("not stable"), so click `#splash-hint` instead. Drive with `__game.input.keys.add('KeyD')` / `.delete(...)` and `__game.input.stalk('right')`. Save screenshots under `.playwright-mcp/` (gitignored); the MCP can't write outside the repo.
 
 ## Style
 
