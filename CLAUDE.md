@@ -57,6 +57,12 @@ Run `npm test` after touching anything in `src/scoring/`, `src/vehicles/player.j
 - Teleporting: set `__game.player.s` / `.d` / `.v`; use `__game.road.hazardWithin(s, dist)` to find clear stretches (the longest is ~300m).
 - Browser automation: the title only appears after the splash is tapped. Playwright refuses to click the pulsing `#splash-start` ("not stable"), so click `#splash-hint` instead. Drive with `__game.input.keys.add('KeyD')` / `.delete(...)` and `__game.input.stalk('right')`. Save screenshots under `.playwright-mcp/` (gitignored); the MCP can't write outside the repo.
 
+## Coming later (parked until James has Daniel's audio)
+
+- **More voice lines.** When Daniel records "ten oota ten", also get an "OI!" for the bonk pop-up, a groan for a close pass and a "cheers" for a 9. Add each to `CLIPS` in `src/audio/audio.js` and call `audio.playClip(key)` at the right moment (`Game._bonk`, `Game._showCard`). Missing files are skipped silently.
+- **Daniel's real catchphrases.** Replace the placeholder `CATCHPHRASES` in `src/scoring/quips.js` and work them into the quips where they fit.
+- **Daily leaderboard.** The groundwork is in place: "Today's road" gives everyone the same seed, scoring is deterministic and versioned (`SCORING_VERSION`), and `createRun().finish()` returns plain JSON. What's left is a small backend that accepts a run result and returns today's top scores, plus a leaderboard panel on the end screen. Key results on seed + `SCORING_VERSION` + route id.
+
 ## Style
 
 Low-poly, flat colours, vertex-coloured merged geometry and instancing to keep draw calls low for mid-range phones. UI follows the Instagram reel look (warm orange→red/pink story gradient, white caption cards in a condensed serif, yellow "10 oota 10" comic badge). No purple, no emojis.
