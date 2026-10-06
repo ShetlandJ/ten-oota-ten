@@ -25,6 +25,15 @@ export class Audio {
     }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
+    // iOS mutes Web Audio with the ringer switch unless the session is
+    // 'playback' (Safari 16.4+). Most Instagram viewers are on silent.
+    if (navigator.audioSession) {
+      try {
+        navigator.audioSession.type = 'playback';
+      } catch {
+        /* older WebKit: nothing to do */
+      }
+    }
     const ctx = (this.ctx = new AC());
     this.master = ctx.createGain();
     this.master.gain.value = this.muted ? 0 : 0.8;
