@@ -85,16 +85,6 @@ function showTitle() {
   audio.playMusic('rightOfWay');
 }
 
-// Browsers only allow sound after a user gesture: the first tap or key unlocks it
-// (and starts the title music if we're still on the title).
-const firstGesture = () => {
-  audio.unlock();
-  window.removeEventListener('pointerdown', firstGesture);
-  window.removeEventListener('keydown', firstGesture);
-};
-window.addEventListener('pointerdown', firstGesture);
-window.addEventListener('keydown', firstGesture);
-
 // Gentle fly-along behind the start while on the title screen
 let attractT = 0;
 function attract() {
@@ -108,7 +98,7 @@ function startRun(seed) {
   audio.unlock();
   // The first tap on a fresh visit is usually "Drive", which is also what
   // unlocks audio, so let the song carry into the drive and fade under the engine.
-  audio.playMusic('rightOfWay', { fadeOutAfter: 2, fadeOut: 4 });
+  audio.playMusic('rightOfWay', { fadeOutAfter: 0, fadeOut: 2.5 });
   if (isTouch && document.documentElement.requestFullscreen && !document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
@@ -222,9 +212,24 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-$('screen-loading').hidden = true;
-showTitle();
+// Splash: one tap (or key) unlocks audio, then the menu appears with its music.
+attract();
 requestAnimationFrame(frame);
+$('splash-avatar').appendChild(avatarCanvas(120));
+$('loading-text').hidden = true;
+$('splash-start').hidden = false;
+$('splash-hint').hidden = false;
+const begin = (e) => {
+  if (e.type === 'keydown' && ['Tab', 'Shift', 'Meta', 'Alt', 'Control'].includes(e.key)) return;
+  e.preventDefault();
+  $('screen-loading').removeEventListener('pointerdown', begin);
+  window.removeEventListener('keydown', begin);
+  audio.unlock();
+  $('screen-loading').hidden = true;
+  showTitle();
+};
+$('screen-loading').addEventListener('pointerdown', begin);
+window.addEventListener('keydown', begin);
 
 // Debug hook for testing in the console
 window.__game = game;

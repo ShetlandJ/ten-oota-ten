@@ -607,6 +607,37 @@ body.touch .key-hint {
   touch-action: pan-y;
 }
 
+.splash {
+  background: radial-gradient(circle at 50% 40%, rgba(27, 29, 31, 0.35), rgba(27, 29, 31, 0.85));
+  cursor: pointer;
+}
+
+.splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.splash-start {
+  font-size: 18px;
+  padding: 15px 28px;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.splash-hint {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@keyframes pulse {
+  50% {
+    transform: scale(1.06);
+  }
+}
+
 .loading {
   color: #fff;
   font-weight: 700;

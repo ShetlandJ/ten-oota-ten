@@ -96,8 +96,15 @@
       </div>
 
       <!-- Loading -->
-      <div class="screen" id="screen-loading">
-        <div class="loading">Loading the A970…</div>
+      <!-- Loading, then "tap to start": browsers only allow sound after a tap,
+           so this tap is what lets the menu music play. -->
+      <div class="screen splash" id="screen-loading">
+        <div class="splash-inner">
+          <div class="splash-avatar" id="splash-avatar"></div>
+          <div class="loading" id="loading-text">Loading the A970…</div>
+          <button class="btn primary splash-start" id="splash-start" hidden>Tap to start</button>
+          <div class="splash-hint" id="splash-hint" hidden>Sound on for the full experience</div>
+        </div>
       </div>
 
       <!-- Title -->

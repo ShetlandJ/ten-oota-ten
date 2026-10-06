@@ -42,7 +42,7 @@ Run `npm test` after touching anything in `src/scoring/`, `src/vehicles/player.j
 - Indicators never auto-cancel. Same key toggles off; the other side switches over.
 - `public/audio/ten-oota-ten.{mp3,m4a,wav,ogg}` is an optional voice clip of Daniel played on a perfect 10. Until James adds it, four 404s in the console are expected.
 - Touching Daniel never knocks him over: `Game._bonk` freezes the sim and shows the comic pop-up (`ui/bonk.js`), scores 0, then drops him 30m behind the car. This is deliberate (he's real and the game goes to his followers). Head-on crashes with oncoming traffic still get the slow-mo.
-- `public/audio/right-of-way.mp3` loops on the title/end screens via `audio.playMusic`. It only starts after the first tap/key (browser autoplay rules).
+- `public/audio/right-of-way.mp3` loops on the title/end screens via `audio.playMusic`. Browsers block audio until a user gesture, so the page opens on a "Tap to start" splash whose tap unlocks audio; starting a drive fades the song out over 2.5s.
 - `CATCHPHRASES` in `src/scoring/quips.js` are placeholders lifted from Daniel's posts; James may supply real ones.
 
 ## Debugging
