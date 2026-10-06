@@ -3,6 +3,11 @@
 import { DANIEL, BIKE } from '../config.js';
 import { clamp } from '../util/math.js';
 
+// The speed Daniel settles to at s: slower up the climbs, quicker down.
+export function cruiseAt(road, s) {
+  return clamp(DANIEL.cruise - road.gradeAt(s + 4) * 70, 4.4, 11.5);
+}
+
 export class Cyclist {
   constructor(s, wind) {
     this.s = s;
@@ -19,8 +24,7 @@ export class Cyclist {
 
   step(dt, road) {
     this.t += dt;
-    const grade = road.gradeAt(this.s + 4);
-    const target = clamp(DANIEL.cruise - grade * 70, 4.4, 11.5);
+    const target = cruiseAt(road, this.s);
     this.v += (target - this.v) * Math.min(1, dt / 3);
     this.s += this.v * dt;
 

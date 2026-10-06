@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { SIM_DT, OWN_LANE, ROUTE_ENCOUNTERS } from './config.js';
 import { HAZARD_LABEL } from './world/road.js';
 import { PlayerCar } from './vehicles/player.js';
-import { Cyclist } from './vehicles/cyclist.js';
+import { Cyclist, cruiseAt } from './vehicles/cyclist.js';
 import { playerCar, oncomingModel, danielModel, poseDaniel } from './vehicles/models.js';
 import { Traffic } from './traffic/traffic.js';
 import { Wind } from './traffic/wind.js';
@@ -19,13 +19,21 @@ import { showCard } from './ui/card.js';
 import { showBonk } from './ui/bonk.js';
 
 const BLINK_PERIOD = 0.75; // ~80 flashes a minute
-const ENCOUNTER_TRIGGERS = [60, 1260, 2460, 3560]; // metres after the route start
-const SPAWN_AHEAD = 270;
+const ENCOUNTER_TRIGGERS = [60, 1260, 2460, 3560]; // earliest start, metres after the route start
+// Daniel is placed so you catch him just before a clear stretch long enough to
+// pass in, rather than wherever the trigger happens to fall.
+const MIN_WINDOW = 200; // m of unrestricted road
+const CATCH_LEAD = 50; // catch him this far before the stretch starts
+const CATCH_V = 20; // m/s, assumed player speed (closes 10-15 m/s on him)
+const SPAWN_MIN = 250; // m ahead of the player
+const SPAWN_MAX = 450;
+const ENCOUNTER_RUN = 200; // m from the stretch start to a typical finish (HUD dots)
 
 export class Game {
   constructor({ renderer, scene, camera, world, input, audio, hud, onEnd, isTouch }) {
     Object.assign(this, { renderer, scene, camera, world, input, audio, hud, onEnd, isTouch });
     this.road = world.road;
+    this.windows = this.road.clearWindows(MIN_WINDOW);
     this.state = 'idle';
     this.camMode = 'chase';
     this.timeScale = 1;
@@ -85,10 +93,14 @@ export class Game {
     this.state = 'playing';
     this._snapCamera = true;
     const L = road.routeEnd - road.routeStart;
-    this.hud.setEncounters(
-      ROUTE_ENCOUNTERS,
-      ENCOUNTER_TRIGGERS.map((t) => (t + SPAWN_AHEAD + 200) / L),
-    );
+    const dots = [];
+    for (let i = 0, ps = road.routeStart; i < ROUTE_ENCOUNTERS; i++) {
+      const plan = this._planSpawn(Math.max(ps, road.routeStart + ENCOUNTER_TRIGGERS[i]));
+      if (!plan) break;
+      dots.push((plan.window.start - road.routeStart) / L);
+      ps = plan.window.start + ENCOUNTER_RUN;
+    }
+    this.hud.setEncounters(ROUTE_ENCOUNTERS, dots);
     this.hud.toast('Southbound on the A970. Daniel\'s out on his bike somewhere ahead.', 3.5);
   }
 
@@ -144,9 +156,9 @@ export class Game {
     if (!this.active && this.encounterIndex < ROUTE_ENCOUNTERS) {
       const trig = ENCOUNTER_TRIGGERS[this.encounterIndex];
       if (rs >= trig) {
-        const spawnS = p.s + SPAWN_AHEAD;
-        if (spawnS < road.routeEnd - 450) this._spawnEncounter(spawnS);
-        else this.encounterIndex = ROUTE_ENCOUNTERS; // out of road
+        const plan = this._planSpawn(p.s);
+        if (!plan) this.encounterIndex = ROUTE_ENCOUNTERS; // out of road
+        else if (plan.ahead <= SPAWN_MAX) this._spawnEncounter(p.s + plan.ahead);
       }
     }
     const enc = this.active;
@@ -222,6 +234,27 @@ export class Game {
       oncoming: this.traffic.near(p.s, 20, 700).map((o) => ({ id: o.id, s: o.s, v: o.v, length: o.length, alarmed: o.alarmed, type: o.type })),
       crash,
     };
+  }
+
+  // Next clear stretch reachable from player position ps, and how far ahead to
+  // put Daniel so you catch him just before it, allowing for him slowing on
+  // the climbs. ahead > SPAWN_MAX means it's too far off yet: wait. null means
+  // no stretch fits before the end.
+  _planSpawn(ps) {
+    const road = this.road;
+    for (const w of this.windows) {
+      const catchS = w.start - CATCH_LEAD;
+      // Walk back from the catch point until Daniel's ride there takes as
+      // long as the player's drive.
+      const tCar = (catchS - ps) / CATCH_V;
+      let s = catchS;
+      for (let t = 0; t < tCar && s > ps; s -= road.step) t += road.step / cruiseAt(road, s - road.step);
+      const ahead = s - ps;
+      if (ahead < SPAWN_MIN) continue;
+      if (ps + Math.min(ahead, SPAWN_MAX) >= road.routeEnd - 450) return null;
+      return { window: w, ahead };
+    }
+    return null;
   }
 
   _spawnEncounter(s) {

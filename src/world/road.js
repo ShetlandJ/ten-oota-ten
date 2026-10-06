@@ -256,6 +256,23 @@ export class Road {
     return this.nextHz[i] <= dist ? this.nextHzCode[i] : 0;
   }
 
+  // Unrestricted stretches of at least minLen metres inside the route: [{ start, end }].
+  clearWindows(minLen) {
+    const out = [];
+    const end = Math.floor(this.routeEnd / this.step);
+    let i = Math.ceil(this.routeStart / this.step);
+    while (i < end) {
+      if (this.solid[i]) {
+        i++;
+        continue;
+      }
+      const a = i;
+      while (i < end && !this.solid[i]) i++;
+      if ((i - a) * this.step >= minLen) out.push({ start: a * this.step, end: i * this.step });
+    }
+    return out;
+  }
+
   // Fraction of the route where overtaking is restricted (for tuning/debug).
   restrictedFraction() {
     let c = 0;
