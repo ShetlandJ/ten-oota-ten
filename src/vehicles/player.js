@@ -6,9 +6,16 @@ import { clamp, approach } from '../util/math.js';
 
 const MAX_SPEED = 34; // ~76mph
 const BRAKE_MAX = 8.5;
-const STEER_RAMP = 1.1; // per second, keyboard build-up
-const STEER_RETURN = 1.25; // per second, back to centre on release
+// Keyboard: peak lateral accel is roughly rate * vdMax, so these are tuned
+// together to keep a held lane change (~1s) under the 3.6 m/s^2 harsh line.
+const STEER_RAMP = 1.0; // per second, keyboard build-up
+const STEER_RETURN = 0.9; // per second, back to centre on release
 const STEER_REVERSE = 3.2; // per second, flicking the other way (harsh)
+const KEY_LAG = 0.12; // s, lateral response to keyboard steer
+const KEY_VD = [3.3, 0.24]; // keyboard vdMax = min(cap, k * v)
+// Touch (analog) keeps its original response.
+const TOUCH_LAG = 0.22;
+const TOUCH_VD = [2.7, 0.19];
 
 export class PlayerCar {
   constructor(s, v = 20) {
@@ -69,10 +76,11 @@ export class PlayerCar {
     this.v = nv;
 
     // --- Lateral
-    const vdMax = Math.min(2.7, 0.19 * this.v);
+    const [vdCap, vdK] = input.steerAnalog ? TOUCH_VD : KEY_VD;
+    const vdMax = Math.min(vdCap, vdK * this.v);
     const vdTarget = this.steer * vdMax;
     const prevVd = this.vd;
-    this.vd += (vdTarget - this.vd) * Math.min(1, dt / 0.22);
+    this.vd += (vdTarget - this.vd) * Math.min(1, dt / (input.steerAnalog ? TOUCH_LAG : KEY_LAG));
     // physical limit on lateral grip
     const maxDv = 7.5 * dt;
     this.vd = clamp(this.vd, prevVd - maxDv, prevVd + maxDv);

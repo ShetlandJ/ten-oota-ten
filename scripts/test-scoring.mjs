@@ -140,6 +140,30 @@ const horn = drive({ horn: true });
 show('horn', horn);
 assert.ok(horn.flags.includes('horn'));
 
+// Keyboard feel: a held lane change (~1s) stays smooth, a left-right flick is harsh.
+function keyboardLat(script, v = 14) {
+  const car = new PlayerCar(0, v);
+  car.d = -1.65;
+  let peak = 0;
+  let hold = 0;
+  let harsh = false;
+  for (let t = 0; t < 5; t += SIM_DT) {
+    car.step(SIM_DT, { steer: script(t), steerAnalog: false, throttle: 0, brake: 0 }, flatRoad);
+    car.v = v;
+    peak = Math.max(peak, Math.abs(car.latAccel));
+    hold = Math.abs(car.latAccel) > 3.6 ? hold + SIM_DT : 0;
+    if (hold >= 0.12) harsh = true;
+  }
+  return { peak, harsh, d: car.d };
+}
+const laneChange = keyboardLat((t) => (t < 1.0 ? 1 : 0));
+console.log(`\nkeyboard lane change (1.0s hold): ${(laneChange.d + 1.65).toFixed(2)}m across, peak ${laneChange.peak.toFixed(2)} m/s²`);
+assert.ok(laneChange.d > 1.4, 'a 1s hold should reach the other lane');
+assert.ok(!laneChange.harsh);
+const flick = keyboardLat((t) => (t < 0.5 ? 1 : t < 1 ? -1 : 0));
+console.log(`keyboard flick (0.5s right, 0.5s left): peak ${flick.peak.toFixed(2)} m/s²`);
+assert.ok(flick.harsh, 'a left-right flick should count as harsh');
+
 // Determinism: same inputs, same output
 assert.deepEqual(drive(), perfect);
 
