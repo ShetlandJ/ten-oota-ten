@@ -106,7 +106,9 @@ function attract() {
 
 function startRun(seed) {
   audio.unlock();
-  audio.stopMusic();
+  // The first tap on a fresh visit is usually "Drive", which is also what
+  // unlocks audio, so let the song carry into the drive and fade under the engine.
+  audio.playMusic('rightOfWay', { fadeOutAfter: 2, fadeOut: 4 });
   if (isTouch && document.documentElement.requestFullscreen && !document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(() => {});
   }

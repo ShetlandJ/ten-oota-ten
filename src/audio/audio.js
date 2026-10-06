@@ -64,49 +64,62 @@ export class Audio {
     if (this.pendingMusic) this.playMusic(this.pendingMusic);
   }
 
-  async _loadClips() {
+  // Each clip loads independently so the song isn't stuck behind missing files.
+  _loadClips() {
+    this.clipLoads = {};
     for (const [key, base] of Object.entries(CLIPS)) {
-      for (const ext of EXTS) {
-        try {
-          const res = await fetch(`${import.meta.env.BASE_URL}audio/${base}.${ext}`);
-          if (!res.ok || !(res.headers.get('content-type') || '').match(/audio|octet/)) continue;
-          this.clips[key] = await this.ctx.decodeAudioData(await res.arrayBuffer());
-          break;
-        } catch {
-          /* not there, that's fine */
+      this.clipLoads[key] = (async () => {
+        for (const ext of EXTS) {
+          try {
+            const res = await fetch(`${import.meta.env.BASE_URL}audio/${base}.${ext}`);
+            if (!res.ok || !(res.headers.get('content-type') || '').match(/audio|octet/)) continue;
+            this.clips[key] = await this.ctx.decodeAudioData(await res.arrayBuffer());
+            return;
+          } catch {
+            /* not there, that's fine */
+          }
         }
-      }
+      })();
     }
+    return Promise.all(Object.values(this.clipLoads));
   }
 
-  // Loop a clip as music (title / end screens). Safe to call before unlock:
-  // it starts as soon as audio is unlocked and the clip has loaded.
-  async playMusic(key, volume = 0.55) {
+  // Loop a clip as music. Safe to call before unlock: it starts as soon as
+  // audio is unlocked and the clip has loaded. With fadeOutAfter, the music
+  // (already playing or about to start) fades out that many seconds in.
+  async playMusic(key, { volume = 0.55, fadeOutAfter = null, fadeOut = 4 } = {}) {
     this.pendingMusic = key;
     if (!this.ctx) return;
-    await this.clipsReady;
+    await this.clipLoads[key];
     if (this.pendingMusic !== key || !this.clips[key]) return;
-    if (this.music?.key === key) return;
-    this.stopMusic(0.1);
-    const src = this.ctx.createBufferSource();
-    src.buffer = this.clips[key];
-    src.loop = true;
-    const g = this.ctx.createGain();
-    const t = this.ctx.currentTime;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(volume, t + 0.4);
-    src.connect(g).connect(this.master);
-    src.start();
-    this.music = { key, src, g };
+    if (this.music?.key !== key) {
+      this._endMusic(0.1);
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.clips[key];
+      src.loop = true;
+      const g = this.ctx.createGain();
+      const t = this.ctx.currentTime;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(volume, t + 0.4);
+      src.connect(g).connect(this.master);
+      src.start();
+      this.music = { key, src, g, volume };
+    }
+    if (fadeOutAfter != null) this.stopMusic(fadeOut, fadeOutAfter);
   }
 
-  stopMusic(fade = 0.6) {
+  stopMusic(fade = 0.6, delay = 0) {
     this.pendingMusic = null;
+    this._endMusic(fade, delay);
+  }
+
+  // Fades out whatever is playing without cancelling a pending playMusic.
+  _endMusic(fade, delay = 0) {
     if (!this.music || !this.ctx) return;
-    const { src, g } = this.music;
-    const t = this.ctx.currentTime;
+    const { src, g, volume } = this.music;
+    const t = this.ctx.currentTime + delay;
     g.gain.cancelScheduledValues(t);
-    g.gain.setValueAtTime(g.gain.value, t);
+    g.gain.setValueAtTime(delay ? volume : g.gain.value, t);
     g.gain.linearRampToValueAtTime(0, t + fade);
     src.stop(t + fade + 0.05);
     this.music = null;
