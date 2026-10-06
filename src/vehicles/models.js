@@ -37,10 +37,6 @@ export function playerCar(colour = '#d8432f') {
   const g = new THREE.Group();
   const body = merge([
     part(box(1.8, 0.62, 4.3), colour, { y: 0.56 }),
-    part(box(1.62, 0.56, 2.3), '#28343d', { y: 1.15, z: -0.25 }),
-    part(box(1.66, 0.1, 2.05), colour, { y: 1.47, z: -0.3 }),
-    part(box(0.12, 0.5, 0.12), colour, { x: 0.78, y: 1.17, z: 0.88 }),
-    part(box(0.12, 0.5, 0.12), colour, { x: -0.78, y: 1.17, z: 0.88 }),
     part(box(1.84, 0.22, 0.25), '#2d3035', { y: 0.36, z: 2.12 }),
     part(box(1.84, 0.22, 0.25), '#2d3035', { y: 0.36, z: -2.12 }),
     part(box(1.1, 0.16, 0.06), '#22262a', { y: 0.62, z: 2.16 }),
@@ -60,6 +56,18 @@ export function playerCar(colour = '#d8432f') {
   const mesh = new THREE.Mesh(body, sharedMat);
   mesh.castShadow = true;
   g.add(mesh);
+  // Glasshouse, roof and A-pillars: separate so the bonnet cam can hide them.
+  const cabin = new THREE.Mesh(
+    merge([
+      part(box(1.62, 0.56, 2.3), '#28343d', { y: 1.15, z: -0.25 }),
+      part(box(1.66, 0.1, 2.05), colour, { y: 1.47, z: -0.3 }),
+      part(box(0.12, 0.5, 0.12), colour, { x: 0.78, y: 1.17, z: 0.88 }),
+      part(box(0.12, 0.5, 0.12), colour, { x: -0.78, y: 1.17, z: 0.88 }),
+    ]),
+    sharedMat,
+  );
+  cabin.castShadow = true;
+  g.add(cabin);
   const head = lamp('#fff3c4', '#fff3c4');
   head.emissiveIntensity = 0.4;
   g.add(lampMesh(head, 0.34, 0.16, 0.05, 0.62, 0.72, 2.16));
@@ -75,7 +83,7 @@ export function playerCar(colour = '#d8432f') {
     [1.1, 1.0, 0.75, 0.04, 0.08, 0.16],
     [-1.1, 1.0, 0.75, 0.04, 0.08, 0.16],
   ]);
-  return { group: g, indicators: ind, brake, length: 4.3, width: 1.8 };
+  return { group: g, cabin, indicators: ind, brake, length: 4.3, width: 1.8 };
 }
 
 const CAR_COLOURS = ['#e9e9e4', '#b8bcc0', '#22262b', '#24426b', '#a8302a', '#e3b23c', '#3f6b4a', '#d9cdb0', '#5b6770', '#c9562d'];

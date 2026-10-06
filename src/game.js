@@ -490,6 +490,8 @@ export class Game {
   }
 
   _updateCamera(dt, pos, y, f) {
+    // From the driver's seat the roof and pillars would fill the screen.
+    this.car.cabin.visible = this.camMode !== 'bonnet' || !!this.crash;
     if (this.debugCam) return;
     const cam = this.camera;
     const portrait = cam.aspect < 1;
