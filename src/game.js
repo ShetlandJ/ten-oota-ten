@@ -28,6 +28,7 @@ const CATCH_V = 20; // m/s, assumed player speed (closes 10-15 m/s on him)
 const SPAWN_MIN = 250; // m ahead of the player
 const SPAWN_MAX = 450;
 const ENCOUNTER_RUN = 200; // m from the stretch start to a typical finish (HUD dots)
+const PROMPT_RANGE = 150; // m: approach/indicate-out chips show inside this
 
 export class Game {
   constructor({ renderer, scene, camera, world, input, audio, hud, onEnd, isTouch }) {
@@ -571,9 +572,13 @@ export class Game {
       const b = enc.daniel;
       const ahead = b.s - b.length / 2 - (p.s + p.length / 2);
       const phase = enc.tracker.phase;
-      s.phase = phase === 'approach' || phase === 'indicate out' ? `${phase} · <b>Daniel ${Math.max(0, Math.round(ahead))}m</b>` : phase;
+      // Approach prompts wait until he's close enough to matter.
+      const early = phase === 'approach' || phase === 'indicate out';
+      const near = ahead < PROMPT_RANGE;
+      if (!early) s.phase = phase;
+      else if (near) s.phase = `${phase} · <b>Daniel ${Math.max(0, Math.round(ahead))}m</b>`;
       const hz = road.hazardWithin(p.s, 70);
-      if (hz && (phase === 'approach' || phase === 'indicate out' || phase === 'pass')) s.hazard = `No overtaking: ${HAZARD_LABEL[hz]}`;
+      if (hz && ((early && near) || phase === 'pass')) s.hazard = `No overtaking: ${HAZARD_LABEL[hz]}`;
       if (ahead > 0 && ahead < 80 && p.d < OWN_LANE + 0.6) s.headway = ahead / Math.max(p.v, 0.5);
       s.gust = this.wind.active(b.t) && ahead < 150 && ahead > -40;
       const out = phase === 'pass' || phase === 'indicate in' || phase === 'move in';
