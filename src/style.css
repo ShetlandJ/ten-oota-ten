@@ -756,6 +756,14 @@ body:not(.touch) .controls-touch {
   margin-top: 14px;
 }
 
+.credit.made-by {
+  margin-bottom: -10px;
+}
+
+.credit a {
+  color: inherit;
+}
+
 .panel {
   background: #fff;
   border-radius: 18px;
