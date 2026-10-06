@@ -26,7 +26,7 @@ export function showCard(result, quip, { index, total, onContinue }) {
 
   const list = $('card-breakdown');
   if (result.crash) {
-    list.innerHTML = `<li><span class="mark">✗</span><span class="label">${result.crash === 'cyclist' ? 'You hit Daniel' : 'Head-on collision'}</span><span class="ded">0</span></li>`;
+    list.innerHTML = `<li><span class="mark">✗</span><span class="label">${result.crash === 'cyclist' ? "You touched Daniel's bike" : 'Head-on collision'}</span><span class="ded">0</span></li>`;
   } else {
     const rows = result.phases.map(
       (p) =>

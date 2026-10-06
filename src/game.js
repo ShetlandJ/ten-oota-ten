@@ -16,6 +16,7 @@ import { Rng } from './util/rng.js';
 import { damp, clamp } from './util/math.js';
 import { animateSheep } from './world/scenery.js';
 import { showCard } from './ui/card.js';
+import { showBonk } from './ui/bonk.js';
 
 const BLINK_PERIOD = 0.75; // ~80 flashes a minute
 const ENCOUNTER_TRIGGERS = [60, 1260, 2460, 3560]; // metres after the route start
@@ -75,6 +76,7 @@ export class Game {
     this.hornWas = false;
     this.timeScale = 1;
     this.crash = null;
+    this.bonked = false;
     this.acc = 0;
     for (const m of this.oncomingMeshes.values()) this.scene.remove(m.group);
     this.oncomingMeshes.clear();
@@ -164,7 +166,7 @@ export class Game {
     let crashWith = null;
     const carL = p.d - p.width / 2;
     const carR = p.d + p.width / 2;
-    if (enc && !enc.daniel.crashed) {
+    if (enc) {
       const b = enc.daniel;
       if (Math.abs(p.s - b.s) < (p.length + b.length) / 2 - 0.15 && carL < b.d + b.width / 2 && carR > b.d - b.width / 2 && p.v > 0.5) {
         crash = 'cyclist';
@@ -196,7 +198,8 @@ export class Game {
       if (enc.tracker.state === 'done' && !crash) this._finishEncounter(enc);
     }
 
-    if (crash && this.state === 'playing') this._startCrash(crash, crashWith);
+    if (crash === 'cyclist' && this.state === 'playing') this._bonk(enc);
+    else if (crash && this.state === 'playing') this._startCrash(crash, crashWith);
 
     // End of the route
     if (this.state === 'playing' && p.s >= road.routeEnd) this._endRun();
@@ -260,11 +263,47 @@ export class Game {
       total: ROUTE_ENCOUNTERS,
       onContinue: () => {
         if (this.crash) this._recoverFromCrash();
+        if (this.bonked) this._recoverFromBonk();
         this.state = 'playing';
         this.acc = 0;
         if (this.player.s >= this.road.routeEnd - 30) this._endRun();
       },
     });
+  }
+
+  // Touching Daniel freezes the game and he pops up to tell you off. No
+  // knocking him over: he's a real person and this goes to his followers.
+  _bonk(enc) {
+    this.state = 'bonk';
+    this.audio.engine(0, 0, false);
+    this.audio.horn(false);
+    this.audio.bonk();
+    const result = enc.tracker.result();
+    const quip = quipFor(result, this.seed);
+    this.run.addOvertake(result, quip, { s: this.player.s, t: this.t });
+    this.hud.markEncounter(enc.index);
+    this.encounterIndex++;
+    this.lastDaniel = enc.daniel;
+    this.active = null;
+    this.bonked = true;
+    showBonk(quip, this.seed, enc.index, () => this._showCard(result, quip, enc.index));
+  }
+
+  _recoverFromBonk() {
+    this.bonked = false;
+    const p = this.player;
+    const b = this.lastDaniel;
+    // He drops back, dusts himself off and carries on behind you.
+    if (b) {
+      b.s = p.s - 30;
+      b.d = OWN_LANE - 0.7;
+    }
+    p.d = OWN_LANE;
+    p.vd = 0;
+    p.steer = 0;
+    p.v = clamp(p.v, 8, 15);
+    this.input.reset();
+    this.hud.toast("Daniel's back on the bike. Drive on.", 2.5);
   }
 
   _startCrash(kind, other) {
@@ -273,7 +312,6 @@ export class Game {
     this.timeScale = 0.12;
     this.audio.crash();
     this.audio.horn(false);
-    if (kind === 'cyclist' && this.active) this.active.daniel.crash();
     this.player.v *= 0.35;
     if (other) other.v *= 0.3;
   }
@@ -369,22 +407,11 @@ export class Game {
       dg.rotation.order = 'YXZ';
       dg.rotation.y = bf.heading - Math.atan2(b.vd, Math.max(b.v, 1));
       dg.rotation.x = -Math.atan(bf.grade);
-      if (b.crashed) {
-        const k = Math.min(1, b.crashT / 0.9);
-        this.dan.lean.rotation.z = k * 1.45;
-        this.dan.lean.position.x = k * 1.2;
-        this.dan.rider.position.set(k * 0.6, Math.sin(k * Math.PI) * 0.9, k * 1.4);
-        this.dan.rider.rotation.x = k * 1.2;
-      } else {
-        this.dan.lean.rotation.z = b.lean;
-        this.dan.lean.position.x = 0;
-        this.dan.rider.position.set(0, 0, 0);
-        this.dan.rider.rotation.x = 0;
-        // Turn to look at the car when it's alongside
-        const rel = p.s - b.s;
-        const look = Math.abs(rel) < 9 && p.d > b.d ? -0.9 : 0;
-        this.danLook = damp(this.danLook || 0, look, 4, dt);
-      }
+      this.dan.lean.rotation.z = b.lean;
+      // Turn to look at the car when it's alongside
+      const rel = p.s - b.s;
+      const look = Math.abs(rel) < 9 && p.d > b.d ? -0.9 : 0;
+      this.danLook = damp(this.danLook || 0, look, 4, dt);
       poseDaniel(this.dan, b.crank, this.danLook || 0);
       this.dan.rearLight.emissiveIntensity = Math.sin(this.t * 9) > 0 ? 1.8 : 0.1;
       if (!this.active && b.s < p.s - 250) this.dan.group.visible = false;

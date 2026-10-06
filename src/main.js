@@ -73,7 +73,7 @@ const game = new Game({
 // ---- Title -------------------------------------------------------------------
 $('title-avatar').appendChild(avatarCanvas(150));
 function showTitle() {
-  for (const id of ['hud', 'touch', 'screen-end', 'screen-pause', 'card']) $(id).hidden = true;
+  for (const id of ['hud', 'touch', 'screen-end', 'screen-pause', 'card', 'bonk']) $(id).hidden = true;
   $('screen-title').hidden = false;
   const pb = load('pb');
   const tens = load('tens', 0);
@@ -82,7 +82,18 @@ function showTitle() {
     : `"${CATCHPHRASES[1]}…"`;
   game.state = 'idle';
   attract();
+  audio.playMusic('rightOfWay');
 }
+
+// Browsers only allow sound after a user gesture: the first tap or key unlocks it
+// (and starts the title music if we're still on the title).
+const firstGesture = () => {
+  audio.unlock();
+  window.removeEventListener('pointerdown', firstGesture);
+  window.removeEventListener('keydown', firstGesture);
+};
+window.addEventListener('pointerdown', firstGesture);
+window.addEventListener('keydown', firstGesture);
 
 // Gentle fly-along behind the start while on the title screen
 let attractT = 0;
@@ -95,10 +106,11 @@ function attract() {
 
 function startRun(seed) {
   audio.unlock();
+  audio.stopMusic();
   if (isTouch && document.documentElement.requestFullscreen && !document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
-  for (const id of ['screen-title', 'screen-end', 'screen-pause', 'card']) $(id).hidden = true;
+  for (const id of ['screen-title', 'screen-end', 'screen-pause', 'card', 'bonk']) $(id).hidden = true;
   hud.show(true);
   $('touch').hidden = !isTouch;
   game.start(seed);
@@ -148,6 +160,7 @@ function showEnd(run) {
   $('share-preview').innerHTML = '';
   $('share-preview').appendChild(preview);
   $('screen-end').hidden = false;
+  audio.playMusic('rightOfWay');
   console.info('[10oota10] run result', run);
 }
 let lastShare = null;

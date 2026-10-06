@@ -15,18 +15,10 @@ export class Cyclist {
     this.lean = 0;
     this.length = BIKE.length;
     this.width = BIKE.width;
-    this.crashed = false;
-    this.crashT = 0;
   }
 
   step(dt, road) {
     this.t += dt;
-    if (this.crashed) {
-      this.crashT += dt;
-      this.v = Math.max(0, this.v - 6 * dt);
-      this.s += this.v * dt;
-      return;
-    }
     const grade = road.gradeAt(this.s + 4);
     const target = clamp(DANIEL.cruise - grade * 70, 4.4, 11.5);
     this.v += (target - this.v) * Math.min(1, dt / 3);
@@ -43,10 +35,5 @@ export class Cyclist {
     // Cadence: ~80rpm at cruise, freewheel when quick downhill
     const cadence = this.v > 10 ? 0.3 : (this.v / DANIEL.cruise) * 8.4;
     this.crank += cadence * dt;
-  }
-
-  crash() {
-    this.crashed = true;
-    this.crashT = 0;
   }
 }

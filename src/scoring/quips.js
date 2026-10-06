@@ -115,9 +115,12 @@ const Q = {
     'You waited. You actually waited. Shetland thanks you.',
   ],
   hitDaniel: [
-    'You. Hit. Me. Zero oota ten. My solicitor will be in touch.',
-    "Zero. I'm in the ditch with a sheep looking at me.",
-    'ZERO. The helmet cam got everything. EVERYTHING.',
+    'You TOUCHED my BIKE. Zero oota ten.',
+    "Contact. Actual contact. The helmet cam's filed a complaint.",
+    "We're close, you and me. But no' that close.",
+    "Zero. I've been nudged by sheep with more respect.",
+    "That's my pannier you just met. It's got my piece in it.",
+    'Did du think I was a speed bump? Zero.',
   ],
   headOn: [
     'Head-on. Zero. That poor driver was only going to the Co-op.',

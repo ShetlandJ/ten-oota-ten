@@ -38,7 +38,7 @@ Every phase has to be clean: approach, indicate out, move out, pass, indicate in
 - No harsh steering or braking at any point.
 - Waiting behind for a genuinely safe gap earns a patience bonus. It can make up for small deductions but can't turn a 9 into a 10.
 
-Hitting Daniel gets a 0 and a slow-motion replay.
+Touching Daniel's bike freezes the game and a big comic Daniel pops up to tell you off. That's a 0, and you carry on with him behind you. He's never knocked over.
 
 ## Code layout
 
@@ -69,5 +69,6 @@ No-overtaking zones are calculated from the data. Forward sight distance is chec
 
 - Quips are in `src/scoring/quips.js`. Replace `CATCHPHRASES` with his real ones.
 - Voice clips: drop `public/audio/ten-oota-ten.mp3` (or `.m4a`/`.wav`) in and it plays on a perfect 10.
+- `public/audio/right-of-way.mp3` ("Do You Have The Right Of Way?") loops on the title and end screens.
 
 Map data © OpenStreetMap contributors (ODbL). Elevation: Mapzen Terrarium via AWS Open Data.

@@ -6,6 +6,7 @@ import { load, save } from '../util/storage.js';
 // names (mp3, m4a or wav) and they'll be used; missing files are ignored.
 const CLIPS = {
   tenOotaTen: 'ten-oota-ten',
+  rightOfWay: 'right-of-way', // "Do You Have The Right Of Way?" - title/end screen loop
 };
 const EXTS = ['mp3', 'm4a', 'wav', 'ogg'];
 
@@ -59,7 +60,8 @@ export class Audio {
     wn.connect(wf).connect(this.windGain).connect(this.master);
     wn.start();
 
-    this._loadClips();
+    this.clipsReady = this._loadClips();
+    if (this.pendingMusic) this.playMusic(this.pendingMusic);
   }
 
   async _loadClips() {
@@ -75,6 +77,39 @@ export class Audio {
         }
       }
     }
+  }
+
+  // Loop a clip as music (title / end screens). Safe to call before unlock:
+  // it starts as soon as audio is unlocked and the clip has loaded.
+  async playMusic(key, volume = 0.55) {
+    this.pendingMusic = key;
+    if (!this.ctx) return;
+    await this.clipsReady;
+    if (this.pendingMusic !== key || !this.clips[key]) return;
+    if (this.music?.key === key) return;
+    this.stopMusic(0.1);
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.clips[key];
+    src.loop = true;
+    const g = this.ctx.createGain();
+    const t = this.ctx.currentTime;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(volume, t + 0.4);
+    src.connect(g).connect(this.master);
+    src.start();
+    this.music = { key, src, g };
+  }
+
+  stopMusic(fade = 0.6) {
+    this.pendingMusic = null;
+    if (!this.music || !this.ctx) return;
+    const { src, g } = this.music;
+    const t = this.ctx.currentTime;
+    g.gain.cancelScheduledValues(t);
+    g.gain.setValueAtTime(g.gain.value, t);
+    g.gain.linearRampToValueAtTime(0, t + fade);
+    src.stop(t + fade + 0.05);
+    this.music = null;
   }
 
   hasClip(key) {
@@ -215,6 +250,25 @@ export class Audio {
       o.stop(t + dt + 0.7);
       o2.stop(t + dt + 0.7);
     }
+  }
+
+  // Comic "boing" when you touch Daniel's bike, then his bell.
+  bonk() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(180, t);
+    o.frequency.exponentialRampToValueAtTime(720, t + 0.12);
+    o.frequency.exponentialRampToValueAtTime(140, t + 0.45);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    o.connect(g).connect(this.master);
+    o.start(t);
+    o.stop(t + 0.55);
+    setTimeout(() => this.bell(), 350);
   }
 
   crash() {

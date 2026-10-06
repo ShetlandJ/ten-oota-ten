@@ -41,6 +41,8 @@ Run `npm test` after touching anything in `src/scoring/`, `src/vehicles/player.j
 - Player steering is deliberately ramped so steady keyboard input stays under the 3.6 m/s² harsh-steer threshold. Only flicking left-right or fast touch swipes count as harsh. Changing `STEER_RAMP`/`STEER_RETURN`/`vdMax` in `player.js` changes smoothness scoring.
 - Indicators never auto-cancel. Same key toggles off; the other side switches over.
 - `public/audio/ten-oota-ten.{mp3,m4a,wav,ogg}` is an optional voice clip of Daniel played on a perfect 10. Until James adds it, four 404s in the console are expected.
+- Touching Daniel never knocks him over: `Game._bonk` freezes the sim and shows the comic pop-up (`ui/bonk.js`), scores 0, then drops him 30m behind the car. This is deliberate (he's real and the game goes to his followers). Head-on crashes with oncoming traffic still get the slow-mo.
+- `public/audio/right-of-way.mp3` loops on the title/end screens via `audio.playMusic`. It only starts after the first tap/key (browser autoplay rules).
 - `CATCHPHRASES` in `src/scoring/quips.js` are placeholders lifted from Daniel's posts; James may supply real ones.
 
 ## Debugging
