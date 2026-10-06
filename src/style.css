@@ -222,6 +222,29 @@ button {
   background: rgba(20, 22, 24, 0.55);
 }
 
+.ind {
+  position: relative;
+}
+
+.ind kbd {
+  position: absolute;
+  bottom: -6px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: #fff;
+  color: var(--ink);
+  font: 800 11px system-ui, sans-serif;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+body.touch .ind kbd {
+  display: none;
+}
+
 .ind svg {
   width: 26px;
   height: 26px;
@@ -389,12 +412,42 @@ button {
   bottom: calc(12px + var(--safe-b));
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  max-width: calc(100vw - 24px);
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(20, 22, 24, 0.5);
-  padding: 5px 10px;
-  border-radius: 999px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(20, 22, 24, 0.6);
+  padding: 6px 12px;
+  border-radius: 12px;
+}
+
+.key-hint span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   white-space: nowrap;
+}
+
+.key-hint small {
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.key-hint kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 5px;
+  background: #fff;
+  color: var(--ink);
+  font: 800 11px system-ui, sans-serif;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
 
 body.touch .key-hint {

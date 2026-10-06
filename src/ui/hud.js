@@ -23,7 +23,6 @@ export class Hud {
       progFill: $('progress-fill'),
       progDots: $('progress-dots'),
       progCount: $('progress-count'),
-      keyHint: $('key-hint'),
       touchInd: [...document.querySelectorAll('[data-ind]')],
     };
     this.cache = {};
@@ -109,9 +108,5 @@ export class Hud {
 
     this.set('prog', Math.round(s.progress * 400), (v) => (e.progFill.style.width = `${v / 4}%`));
     this.set('count', s.encounterText, (v) => (e.progCount.textContent = v));
-  }
-
-  hideKeyHint() {
-    this.el.keyHint.hidden = true;
   }
 }

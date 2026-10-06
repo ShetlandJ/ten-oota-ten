@@ -117,7 +117,6 @@ function startRun(seed) {
   $('touch').hidden = !isTouch;
   game.start(seed);
   currentSeed = seed;
-  setTimeout(() => hud.hideKeyHint(), 12000);
 }
 let currentSeed = null;
 
