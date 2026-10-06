@@ -348,7 +348,7 @@ export class Game {
     const g = this.car.group;
     g.position.set(pos.x, y, pos.z);
     g.rotation.order = 'YXZ';
-    g.rotation.y = f.heading + Math.atan2(p.vd, Math.max(p.v, 1));
+    g.rotation.y = f.heading - Math.atan2(p.vd, Math.max(p.v, 1));
     g.rotation.x = -Math.atan(f.grade) - clamp(p.longAccel, -8, 4) * 0.006;
     g.rotation.z = clamp(-p.latAccel * 0.012, -0.06, 0.06);
     if (p.offRoad) g.position.y += Math.sin(this.t * 40) * 0.03 * p.offRoad;
@@ -367,7 +367,7 @@ export class Game {
       const dg = this.dan.group;
       dg.position.set(bp.x, road.heightAt(b.s) + 0.06, bp.z);
       dg.rotation.order = 'YXZ';
-      dg.rotation.y = bf.heading + Math.atan2(b.vd, Math.max(b.v, 1));
+      dg.rotation.y = bf.heading - Math.atan2(b.vd, Math.max(b.v, 1));
       dg.rotation.x = -Math.atan(bf.grade);
       if (b.crashed) {
         const k = Math.min(1, b.crashT / 0.9);
