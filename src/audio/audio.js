@@ -6,7 +6,6 @@ import { load, save } from '../util/storage.js';
 // names (mp3, m4a or wav) and they'll be used; missing files are ignored.
 const CLIPS = {
   tenOotaTen: 'ten-oota-ten',
-  rightOfWay: 'right-of-way', // "Do You Have The Right Of Way?" - title/end screen loop
 };
 const EXTS = ['mp3', 'm4a', 'wav', 'ogg'];
 
@@ -70,10 +69,9 @@ export class Audio {
     wn.start();
 
     this.clipsReady = this._loadClips();
-    if (this.pendingMusic) this.playMusic(this.pendingMusic);
   }
 
-  // Each clip loads independently so the song isn't stuck behind missing files.
+  // Each clip loads independently so one missing file doesn't hold up the rest.
   _loadClips() {
     this.clipLoads = {};
     for (const [key, base] of Object.entries(CLIPS)) {
@@ -91,47 +89,6 @@ export class Audio {
       })();
     }
     return Promise.all(Object.values(this.clipLoads));
-  }
-
-  // Loop a clip as music. Safe to call before unlock: it starts as soon as
-  // audio is unlocked and the clip has loaded. With fadeOutAfter, the music
-  // (already playing or about to start) fades out that many seconds in.
-  async playMusic(key, { volume = 0.55, fadeOutAfter = null, fadeOut = 4 } = {}) {
-    this.pendingMusic = key;
-    if (!this.ctx) return;
-    await this.clipLoads[key];
-    if (this.pendingMusic !== key || !this.clips[key]) return;
-    if (this.music?.key !== key) {
-      this._endMusic(0.1);
-      const src = this.ctx.createBufferSource();
-      src.buffer = this.clips[key];
-      src.loop = true;
-      const g = this.ctx.createGain();
-      const t = this.ctx.currentTime;
-      g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(volume, t + 0.4);
-      src.connect(g).connect(this.master);
-      src.start();
-      this.music = { key, src, g, volume };
-    }
-    if (fadeOutAfter != null) this.stopMusic(fadeOut, fadeOutAfter);
-  }
-
-  stopMusic(fade = 0.6, delay = 0) {
-    this.pendingMusic = null;
-    this._endMusic(fade, delay);
-  }
-
-  // Fades out whatever is playing without cancelling a pending playMusic.
-  _endMusic(fade, delay = 0) {
-    if (!this.music || !this.ctx) return;
-    const { src, g, volume } = this.music;
-    const t = this.ctx.currentTime + delay;
-    g.gain.cancelScheduledValues(t);
-    g.gain.setValueAtTime(delay ? volume : g.gain.value, t);
-    g.gain.linearRampToValueAtTime(0, t + fade);
-    src.stop(t + fade + 0.05);
-    this.music = null;
   }
 
   hasClip(key) {

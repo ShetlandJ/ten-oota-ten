@@ -82,7 +82,6 @@ function showTitle() {
     : `"${CATCHPHRASES[1]}…"`;
   game.state = 'idle';
   attract();
-  audio.playMusic('rightOfWay');
 }
 
 // Gentle fly-along behind the start while on the title screen
@@ -96,9 +95,6 @@ function attract() {
 
 function startRun(seed) {
   audio.unlock();
-  // The first tap on a fresh visit is usually "Drive", which is also what
-  // unlocks audio, so let the song carry into the drive and fade under the engine.
-  audio.playMusic('rightOfWay', { fadeOutAfter: 0, fadeOut: 2.5 });
   if (isTouch && document.documentElement.requestFullscreen && !document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
@@ -151,7 +147,6 @@ function showEnd(run) {
   $('share-preview').innerHTML = '';
   $('share-preview').appendChild(preview);
   $('screen-end').hidden = false;
-  audio.playMusic('rightOfWay');
   console.info('[10oota10] run result', run);
 }
 let lastShare = null;
@@ -212,7 +207,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-// Splash: one tap (or key) unlocks audio, then the menu appears with its music.
+// Splash: one tap (or key) unlocks audio, then the menu appears.
 attract();
 requestAnimationFrame(frame);
 $('splash-avatar').appendChild(avatarCanvas(120));

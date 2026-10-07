@@ -69,6 +69,5 @@ No-overtaking zones are calculated from the data. Forward sight distance is chec
 
 - Quips are in `src/scoring/quips.js`. Replace `CATCHPHRASES` with his real ones.
 - Voice clips: drop `public/audio/ten-oota-ten.mp3` (or `.m4a`/`.wav`) in and it plays on a perfect 10.
-- `public/audio/right-of-way.mp3` ("Do You Have The Right Of Way?") loops on the title and end screens.
 
 Map data © OpenStreetMap contributors (ODbL). Elevation: Mapzen Terrarium via AWS Open Data.
