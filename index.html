@@ -235,7 +235,18 @@
           var t = e.target;
           if (t && t !== window && t.tagName) {
             // Only the game's own script and styles matter; missing audio is expected
-            if (t.tagName === 'SCRIPT' || t.tagName === 'LINK') fail('A file failed to download.');
+            if (t.tagName === 'SCRIPT' || t.tagName === 'LINK') {
+              // Usually a stale cached page asking for a bundle the last deploy
+              // replaced. A reload revalidates the page, so try that once.
+              var key = '10oota10:reloadedAt', last = 0;
+              try { last = +sessionStorage.getItem(key) || 0; } catch (err) {}
+              if (Date.now() - last > 60000) {
+                try { sessionStorage.setItem(key, String(Date.now())); } catch (err) {}
+                location.reload();
+                return;
+              }
+              fail('A file failed to download.');
+            }
             return;
           }
           fail(e.message);
