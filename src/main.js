@@ -41,6 +41,7 @@ resize();
 
 // ---- Load & build the world ------------------------------------------------
 const res = await fetch(`${import.meta.env.BASE_URL}data/route.json`);
+if (!res.ok) throw new Error(`The road data didn't download (${res.status}).`);
 const data = await res.json();
 const road = new Road(data);
 const terrain = new Terrain(data);
@@ -212,6 +213,7 @@ attract();
 requestAnimationFrame(frame);
 $('splash-avatar').appendChild(avatarCanvas(120));
 $('loading-text').hidden = true;
+$('loading-slow')?.remove();
 $('splash-start').hidden = false;
 $('splash-hint').hidden = false;
 const begin = (e) => {

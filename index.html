@@ -202,6 +202,60 @@
 
       <div class="rotate-hint" id="rotate-hint">Tip: landscape gives you more road.</div>
     </div>
+    <!-- If anything breaks before the splash is ready (no WebGL, a file that
+         didn't download), say so instead of sitting on "Loading" forever. -->
+    <script>
+      (function () {
+        var done = false;
+        function show(text, detail) {
+          var el = document.getElementById('loading-text');
+          if (done || !el || el.hidden) return;
+          done = true;
+          el.textContent = text;
+          if (detail) {
+            var d = document.createElement('div');
+            d.className = 'splash-hint';
+            d.textContent = detail;
+            el.after(d);
+          }
+          var b = document.createElement('button');
+          b.className = 'btn primary';
+          b.textContent = 'Try again';
+          b.onclick = function () { location.reload(); };
+          el.parentNode.appendChild(b);
+        }
+        function fail(msg) {
+          var gl = /webgl/i.test(msg || '');
+          show(
+            gl ? "Your phone couldn't start the 3D graphics." : "Couldn't load the A970.",
+            gl ? 'Close a few tabs or restart the browser, then try again.' : String(msg || '').replace(/^Uncaught (Error: )?/, '').slice(0, 160),
+          );
+        }
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (t && t !== window && t.tagName) {
+            // Only the game's own script and styles matter; missing audio is expected
+            if (t.tagName === 'SCRIPT' || t.tagName === 'LINK') fail('A file failed to download.');
+            return;
+          }
+          fail(e.message);
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          fail(e.reason && e.reason.message ? e.reason.message : String(e.reason));
+        });
+        // Slow connection: keep waiting, but offer a way out
+        setTimeout(function () {
+          var el = document.getElementById('loading-text');
+          if (done || !el || el.hidden) return;
+          var d = document.createElement('div');
+          d.id = 'loading-slow';
+          d.className = 'splash-hint';
+          d.textContent = 'Still going. Slow signal? Tap to reload.';
+          d.onclick = function () { location.reload(); };
+          el.after(d);
+        }, 20000);
+      })();
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
