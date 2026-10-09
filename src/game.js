@@ -19,10 +19,10 @@ import { showCard } from './ui/card.js';
 import { showBonk } from './ui/bonk.js';
 
 const BLINK_PERIOD = 0.75; // ~80 flashes a minute
-const ENCOUNTER_TRIGGERS = [60, 1260, 2460, 3560]; // earliest start, metres after the route start
+const ENCOUNTER_TRIGGERS = [60, 700, 1700, 2460, 3560]; // earliest start, metres after the route start
 // Daniel is placed so you catch him just before a clear stretch long enough to
 // pass in, rather than wherever the trigger happens to fall.
-const MIN_WINDOW = 200; // m of unrestricted road
+const MIN_WINDOW = 185; // m of unrestricted road (the village stretch at ~1.3km is 192m)
 const CATCH_LEAD = 50; // catch him this far before the stretch starts
 const CATCH_V = 20; // m/s, assumed player speed (closes 10-15 m/s on him)
 const SPAWN_MIN = 250; // m ahead of the player
@@ -270,7 +270,7 @@ export class Game {
     this.lastDaniel = null;
     this.dan.group.visible = true;
     this.dan.group.rotation.set(0, 0, 0);
-    const lines = ['Daniel ahead. Helmet cam rolling.', "He's back. Of course he's back.", 'Hi-vis on the horizon. Daniel again.', 'One more go. Make it count.'];
+    const lines = ['Daniel ahead. Helmet cam rolling.', "He's back. Of course he's back.", 'Hi-vis on the horizon. Daniel again.', 'Daniel. Again. He does love this road.', 'One more go. Make it count.'];
     this.hud.toast(lines[this.encounterIndex] || lines[0], 2.5);
   }
 

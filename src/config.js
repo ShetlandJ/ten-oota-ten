@@ -25,4 +25,4 @@ export const DANIEL = {
   lanePos: -2.35, // bike centre, ~0.95m in from the edge
 };
 
-export const ROUTE_ENCOUNTERS = 4;
+export const ROUTE_ENCOUNTERS = 5;

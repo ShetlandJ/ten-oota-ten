@@ -26,6 +26,7 @@ export function buildScenery(road, terrain, data, seed = 'scenery') {
   group.add(signs(road, data));
   const sheep = flock(road, terrain, rng, obstacles, mat);
   group.add(sheep);
+  group.add(tussocks(road, terrain, data, rng, obstacles));
   return { group, sheep };
 }
 
@@ -495,6 +496,90 @@ function flock(road, terrain, rng, obstacles, mat) {
     im.setMatrixAt(i, dummy.matrix);
   });
   im.userData.spots = spots;
+  return im;
+}
+
+// ---- Tussocks --------------------------------------------------------------------
+// Clumps of rough grass and rushes along the verges and into the fields, so the
+// ground near the road isn't one flat green. One instanced draw, no shadows.
+const TUSSOCK_COLOURS = ['#6f8f45', '#7d9a4c', '#8f9f55', '#5f7d3f', '#6a8a3e', '#8f9f55', '#a7a463', '#b5ab72'];
+
+function tussockGeometry() {
+  const blade = (h, rx, rz, x, z) => part(new THREE.ConeGeometry(0.09, h, 3, 1, true), '#ffffff', { x, y: h / 2, z, rx, rz });
+  return merge([
+    blade(0.55, 0, 0, 0, 0),
+    blade(0.45, 0.35, 0.1, 0.05, 0.08),
+    blade(0.42, -0.3, 0.25, -0.06, -0.04),
+    blade(0.38, 0.1, -0.4, 0.08, -0.06),
+    blade(0.35, -0.15, -0.3, -0.07, 0.07),
+  ]);
+}
+
+function tussocks(road, terrain, data, rng, obstacles) {
+  // Keep off side roads, lay-bys and bus stops
+  const keepOut = [];
+  for (const sr of data.sideRoads || []) {
+    for (let i = 1; i < sr.pts.length; i++) {
+      const [x0, z0] = sr.pts[i - 1];
+      const [x1, z1] = sr.pts[i];
+      const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 2);
+      for (let k = 0; k <= n; k++) keepOut.push({ x: x0 + ((x1 - x0) * k) / n, z: z0 + ((z1 - z0) * k) / n, r: sr.width / 2 + 1.2 });
+    }
+  }
+  for (const l of [...(data.laybys || []), ...(data.busStops || [])]) {
+    for (let ds = -40; ds <= 40; ds += 4) {
+      const p = road.pos(l.s + ds, l.d, {});
+      keepOut.push({ x: p.x, z: p.z, r: 7 });
+    }
+  }
+  const CELL = 12;
+  const grid = new Map();
+  for (const o of keepOut) {
+    const key = `${Math.floor(o.x / CELL)},${Math.floor(o.z / CELL)}`;
+    if (!grid.has(key)) grid.set(key, []);
+    grid.get(key).push(o);
+  }
+  const blocked = (x, z) => {
+    const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const list = grid.get(`${cx + i},${cz + j}`);
+        if (list && list.some((o) => Math.hypot(o.x - x, o.z - z) < o.r)) return true;
+      }
+    }
+    return obstacles.some((o) => Math.abs(o.x - x) < o.r && Math.abs(o.z - z) < o.r && Math.hypot(o.x - x, o.z - z) < o.r);
+  };
+
+  const spots = [];
+  const s0 = Math.max(0, road.routeStart - 150);
+  const s1 = Math.min(road.length, road.routeEnd + 150);
+  for (let s = s0; s < s1; s += 1.2) {
+    for (const side of [-1, 1]) {
+      // Dense on the verge, thinning out into the field
+      const off = ROAD.halfWidth + 0.9 + Math.pow(rng.next(), 1.8) * 34;
+      if (rng.next() > 0.85) continue;
+      const p = road.pos(s + rng.range(-0.8, 0.8), side * off, {});
+      if (blocked(p.x, p.z)) continue;
+      let y = terrain.heightAt(p.x, p.z);
+      if (y < 2) continue;
+      // The verge is graded to the road; don't leave clumps hanging off a cutting
+      if (off < 7) y = Math.max(y, road.heightAt(s) - 0.25);
+      spots.push({ x: p.x, y: y - 0.05, z: p.z, rot: rng.range(0, Math.PI * 2), sc: rng.range(0.9, 1.7), sy: rng.range(0.75, 1.3), col: rng.pick(TUSSOCK_COLOURS) });
+    }
+  }
+  const im = new THREE.InstancedMesh(tussockGeometry(), lambert(), spots.length);
+  const dummy = new THREE.Object3D();
+  const c = new THREE.Color();
+  spots.forEach((p, i) => {
+    dummy.position.set(p.x, p.y, p.z);
+    dummy.rotation.set(0, p.rot, 0);
+    dummy.scale.set(p.sc, p.sc * p.sy, p.sc);
+    dummy.updateMatrix();
+    im.setMatrixAt(i, dummy.matrix);
+    im.setColorAt(i, c.set(p.col));
+  });
+  im.receiveShadow = true;
+  im.matrixAutoUpdate = false;
   return im;
 }
 
