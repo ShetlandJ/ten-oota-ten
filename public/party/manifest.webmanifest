@@ -1,0 +1,14 @@
+{
+  "name": "10 Oota 10: Costume Rater",
+  "short_name": "10 Oota 10",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#f5cf1d",
+  "theme_color": "#f5cf1d",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

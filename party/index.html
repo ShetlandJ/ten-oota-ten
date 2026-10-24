@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5cf1d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Ccircle cx=%2232%22 cy=%2232%22 r=%2230%22 fill=%22%23f5cf1d%22 stroke=%22%2316140f%22 stroke-width=%224%22/%3E%3Ctext x=%2232%22 y=%2242%22 font-size=%2228%22 font-weight=%22900%22 text-anchor=%22middle%22 font-family=%22Arial Black%22%3E10%3C/text%3E%3C/svg%3E" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="10 Oota 10" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
+    <title>10 Oota 10: Costume Rater</title>
+    <style>
+      :root {
+        --ink: #16140f;
+        --paper: #ffffff;
+        --yellow: #f5cf1d;
+        --story-a: #ff9a1f;
+        --story-b: #ff4a2e;
+        --story-c: #ff2f6e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: var(--yellow);
+        color: var(--ink);
+        overscroll-behavior: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        font-family: 'Arial Black', Impact, 'Helvetica Neue', sans-serif;
+      }
+
+      /* Landscape stage. Held upright with rotation lock on, the page is portrait,
+         so turn the stage on its side to fill the phone the landscape way. */
+      #stage {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        container-type: size;
+        touch-action: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6cqh;
+        padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      }
+
+      @media (orientation: portrait) {
+        #stage {
+          width: 100vh;
+          width: 100dvh;
+          height: 100vw;
+          transform-origin: top left;
+          transform: translateX(100vw) rotate(90deg);
+        }
+      }
+
+      /* Comic sunburst behind the number, shown on landing. */
+      #burst {
+        position: absolute;
+        left: 50%;
+        top: 42%;
+        width: 160cqw;
+        aspect-ratio: 1;
+        translate: -50% -50%;
+        background: repeating-conic-gradient(rgba(255, 255, 255, 0.35) 0 7deg, transparent 7deg 18deg);
+        border-radius: 50%;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+      }
+
+      #burst.on {
+        opacity: 1;
+        animation: spin 14s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          rotate: 360deg;
+        }
+      }
+
+      .rating {
+        position: relative;
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 3cqw;
+        line-height: 1;
+        font-style: italic;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+      }
+
+      .num {
+        font-size: min(52cqh, 24cqw);
+        color: var(--paper);
+        -webkit-text-stroke: min(1.6cqh, 0.8cqw) var(--ink);
+        paint-order: stroke fill;
+        text-shadow: min(2.2cqh, 1cqw) min(2.2cqh, 1cqw) 0 var(--ink);
+      }
+
+      /* Fixed width so "oota 10" never shifts between 9 and 10. */
+      #pick {
+        display: inline-block;
+        width: 1.32em;
+        text-align: center;
+        touch-action: none;
+        cursor: ns-resize;
+      }
+
+      #pick.counting {
+        color: var(--story-b);
+      }
+
+      .oota {
+        font-size: min(17cqh, 8cqw);
+        color: var(--ink);
+      }
+
+      .actions {
+        position: relative;
+        display: flex;
+        gap: 3cqw;
+        transition: opacity 0.25s;
+      }
+
+      .busy .actions {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .btn {
+        min-width: 30cqw;
+        padding: 0.45em 1em;
+        font: italic 900 min(8cqh, 4cqw) / 1 'Arial Black', Impact, 'Helvetica Neue', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        color: var(--ink);
+        background: var(--paper);
+        border: 4px solid var(--ink);
+        border-radius: 16px;
+        box-shadow: 5px 5px 0 var(--ink);
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      .btn.reset {
+        min-width: 0;
+      }
+
+      .btn:active {
+        translate: 3px 3px;
+        box-shadow: 2px 2px 0 var(--ink);
+      }
+
+      .btn.random {
+        color: var(--paper);
+        background: linear-gradient(135deg, var(--story-a), var(--story-b) 55%, var(--story-c));
+        text-shadow: 2px 2px 0 var(--ink);
+      }
+
+      .chips {
+        position: relative;
+        display: flex;
+        gap: 1.4cqw;
+      }
+
+      .chip {
+        width: 8cqw;
+        aspect-ratio: 1;
+        padding: 0;
+        font: italic 900 min(9cqh, 4.2cqw) / 1 'Arial Black', Impact, 'Helvetica Neue', sans-serif;
+        color: var(--ink);
+        background: var(--paper);
+        border: 3px solid var(--ink);
+        border-radius: 12px;
+        box-shadow: 3px 3px 0 var(--ink);
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      .chip[aria-pressed='true'] {
+        background: var(--ink);
+        color: var(--yellow);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="burst"></div>
+      <div class="rating" aria-live="polite">
+        <span class="num" id="pick">10</span>
+        <span class="oota">oota</span>
+        <span class="num">10</span>
+      </div>
+      <div class="actions" id="actions">
+        <button class="btn" id="picker-btn" type="button">Picker</button>
+        <button class="btn random" id="random-btn" type="button">Random</button>
+        <button class="btn reset" id="reset-btn" type="button">Reset</button>
+      </div>
+      <div class="chips" id="chips" hidden></div>
+    </div>
+
+    <script type="module">
+      const stage = document.getElementById('stage');
+      const pick = document.getElementById('pick');
+      const burst = document.getElementById('burst');
+      const actions = document.getElementById('actions');
+      const chips = document.getElementById('chips');
+
+      let value = 10;
+      let busy = false;
+
+      // ---------- sound ----------
+      let ctx = null;
+      function audio() {
+        if (!ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) ctx = new AC();
+        }
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+        return ctx;
+      }
+
+      function tone(freq, dur, type = 'square', gain = 0.12, at = 0) {
+        const ac = audio();
+        if (!ac) return;
+        const t = ac.currentTime + at;
+        const osc = ac.createOscillator();
+        const g = ac.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        g.gain.setValueAtTime(gain, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        osc.connect(g).connect(ac.destination);
+        osc.start(t);
+        osc.stop(t + dur + 0.02);
+      }
+
+      const tick = (n) => tone(420 + n * 40, 0.05, 'square', 0.07);
+      const beep = () => tone(660, 0.18, 'triangle', 0.2);
+      const fanfare = () => {
+        [523, 659, 784, 1047].forEach((f, i) => tone(f, i === 3 ? 0.6 : 0.14, 'triangle', 0.22, i * 0.11));
+      };
+
+      // ---------- keep the phone awake, go landscape where the browser allows ----------
+      let primed = false;
+      async function prime() {
+        if (primed) return;
+        primed = true;
+        audio();
+        try {
+          await navigator.wakeLock?.request('screen');
+        } catch {}
+        try {
+          if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+            await screen.orientation?.lock?.('landscape');
+          }
+        } catch {}
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && primed) {
+          navigator.wakeLock?.request('screen').catch(() => {});
+        }
+      });
+
+      // ---------- number ----------
+      function show(n, { dir = 1, fast = false } = {}) {
+        pick.textContent = n;
+        pick.animate(
+          [
+            { transform: `translateY(${dir * -35}%)`, opacity: 0.2 },
+            { transform: 'translateY(0)', opacity: 1 },
+          ],
+          { duration: fast ? 70 : 160, easing: 'cubic-bezier(.2,.9,.3,1.2)' },
+        );
+      }
+
+      function setValue(n, dir = 1) {
+        value = n;
+        show(n, { dir });
+        burst.classList.toggle('on', n === 10);
+        renderChips();
+      }
+
+      const wrap = (n) => ((((n - 1) % 10) + 10) % 10) + 1;
+
+      // ---------- picker ----------
+      for (let n = 1; n <= 10; n++) {
+        const b = document.createElement('button');
+        b.className = 'chip';
+        b.type = 'button';
+        b.textContent = n;
+        b.dataset.n = n;
+        chips.append(b);
+      }
+
+      function renderChips() {
+        for (const b of chips.children) b.setAttribute('aria-pressed', String(Number(b.dataset.n) === value));
+      }
+
+      function openPicker(open) {
+        chips.hidden = !open;
+        actions.hidden = open;
+      }
+
+      document.getElementById('picker-btn').addEventListener('click', () => {
+        prime();
+        openPicker(true);
+      });
+
+      chips.addEventListener('click', (e) => {
+        const b = e.target.closest('.chip');
+        if (!b) return;
+        const n = Number(b.dataset.n);
+        tick(n);
+        setValue(n, n >= value ? 1 : -1);
+        openPicker(false);
+      });
+
+      // Swipe the left number up/down to roll it by one.
+      let startY = null;
+      let startX = null;
+      pick.addEventListener('pointerdown', (e) => {
+        if (busy) return;
+        prime();
+        startY = e.clientY;
+        startX = e.clientX;
+      });
+      window.addEventListener('pointerup', (e) => {
+        if (startY === null) return;
+        // The stage is turned 90° in portrait, so screen-x is the stage's vertical.
+        const portrait = matchMedia('(orientation: portrait)').matches;
+        const delta = portrait ? e.clientX - startX : startY - e.clientY;
+        startY = startX = null;
+        if (Math.abs(delta) < 24) return;
+        const dir = delta > 0 ? 1 : -1;
+        const n = wrap(value + dir);
+        tick(n);
+        setValue(n, dir);
+      });
+
+      // ---------- random (always lands on 10) ----------
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      async function random() {
+        if (busy) return;
+        busy = true;
+        prime();
+        openPicker(false);
+        stage.classList.add('busy');
+        burst.classList.remove('on');
+
+        pick.classList.add('counting');
+        for (const c of [3, 2, 1]) {
+          show(c);
+          beep();
+          await wait(800);
+        }
+        pick.classList.remove('counting');
+
+        // Run backwards from 10 so the last step is always 10; vary the length so it never looks rehearsed.
+        const steps = 30 + Math.floor(Math.random() * 10);
+        for (let i = 1; i <= steps; i++) {
+          const n = wrap(10 - (steps - i));
+          const t = i / steps;
+          value = n;
+          show(n, { fast: t < 0.6 });
+          tick(n);
+          await wait(i === steps ? 0 : 40 + 620 * t ** 3);
+        }
+
+        fanfare();
+        pick.animate(
+          [{ transform: 'scale(1)' }, { transform: 'scale(1.35) rotate(-6deg)' }, { transform: 'scale(0.95)' }, { transform: 'scale(1)' }],
+          { duration: 600, easing: 'ease-out' },
+        );
+        burst.classList.add('on');
+        renderChips();
+        await wait(900);
+        stage.classList.remove('busy');
+        busy = false;
+      }
+
+      document.getElementById('random-btn').addEventListener('click', random);
+
+      // Blank "?" between costumes, so the next one doesn't open on the last score.
+      function reset() {
+        prime();
+        openPicker(false);
+        value = 0;
+        burst.classList.remove('on');
+        show('?', { dir: -1 });
+        renderChips();
+      }
+      document.getElementById('reset-btn').addEventListener('click', reset);
+
+      if ('serviceWorker' in navigator && !import.meta.env?.DEV) {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      }
+
+      renderChips();
+      burst.classList.add('on');
+    </script>
+  </body>
+</html>
