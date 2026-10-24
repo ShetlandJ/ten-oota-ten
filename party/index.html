@@ -202,6 +202,14 @@
         touch-action: manipulation;
       }
 
+      #confetti {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
       .chip[aria-pressed='true'] {
         background: var(--ink);
         color: var(--yellow);
@@ -222,6 +230,7 @@
         <button class="btn reset" id="reset-btn" type="button">Reset</button>
       </div>
       <div class="chips" id="chips" hidden></div>
+      <canvas id="confetti"></canvas>
     </div>
 
     <script type="module">
@@ -255,15 +264,86 @@
         osc.frequency.value = freq;
         g.gain.setValueAtTime(gain, t);
         g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-        osc.connect(g).connect(ac.destination);
+        osc.connect(g).connect(out(ac));
         osc.start(t);
         osc.stop(t + dur + 0.02);
       }
 
+      // Everything goes through one compressor so the celebration can stack sounds without clipping.
+      let master = null;
+      function out(ac) {
+        if (!master) {
+          master = ac.createDynamicsCompressor();
+          master.connect(ac.destination);
+        }
+        return master;
+      }
+
+      let noiseBuf = null;
+      function noise(ac) {
+        if (!noiseBuf) {
+          noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+          const d = noiseBuf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        }
+        return noiseBuf;
+      }
+
+      // A crowd clapping: lots of short band-passed noise bursts, thinning out.
+      function applause(dur = 2.6) {
+        const ac = audio();
+        if (!ac) return;
+        const t0 = ac.currentTime + 0.3;
+        for (let i = 0; i < 140; i++) {
+          const at = t0 + dur * Math.random() ** 1.6;
+          const src = ac.createBufferSource();
+          src.buffer = noise(ac);
+          const bp = ac.createBiquadFilter();
+          bp.type = 'bandpass';
+          bp.frequency.value = 900 + Math.random() * 1800;
+          bp.Q.value = 1.2;
+          const g = ac.createGain();
+          const peak = 0.5 * (1 - (at - t0) / dur) + 0.05;
+          g.gain.setValueAtTime(peak, at);
+          g.gain.exponentialRampToValueAtTime(0.0001, at + 0.05);
+          src.connect(bp).connect(g).connect(out(ac));
+          src.start(at, Math.random() * 0.9, 0.07);
+        }
+      }
+
+      // Party blower: a rising buzzy honk, twice.
+      function partyHorn(at) {
+        const ac = audio();
+        if (!ac) return;
+        for (const [off, from, to] of [[0, 330, 520], [0.32, 360, 700]]) {
+          const t = ac.currentTime + at + off;
+          const osc = ac.createOscillator();
+          const lp = ac.createBiquadFilter();
+          const g = ac.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(from, t);
+          osc.frequency.exponentialRampToValueAtTime(to, t + 0.22);
+          lp.type = 'lowpass';
+          lp.frequency.value = 2200;
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.18, t + 0.03);
+          g.gain.setValueAtTime(0.18, t + 0.2);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+          osc.connect(lp).connect(g).connect(out(ac));
+          osc.start(t);
+          osc.stop(t + 0.3);
+        }
+      }
+
       const tick = (n) => tone(420 + n * 40, 0.05, 'square', 0.07);
       const beep = () => tone(660, 0.18, 'triangle', 0.2);
-      const fanfare = () => {
-        [523, 659, 784, 1047].forEach((f, i) => tone(f, i === 3 ? 0.6 : 0.14, 'triangle', 0.22, i * 0.11));
+      const celebrate = () => {
+        [523, 659, 784].forEach((f, i) => tone(f, 0.14, 'triangle', 0.22, i * 0.11));
+        // Big held chord on the last note.
+        [523, 659, 784, 1047].forEach((f) => tone(f, 1.4, 'triangle', 0.14, 0.33));
+        tone(1047, 1.4, 'square', 0.04, 0.33);
+        partyHorn(0.5);
+        applause();
       };
 
       // ---------- keep the phone awake, go landscape where the browser allows ----------
@@ -364,6 +444,184 @@
         setValue(n, dir);
       });
 
+      // ---------- Halloween confetti: paper bits, bats, pumpkins, ghosts ----------
+      const confetti = (() => {
+        const canvas = document.getElementById('confetti');
+        const g = canvas.getContext('2d');
+        const PAPER = ['#ff7a00', '#16140f', '#9be22d', '#ffffff', '#ff4a2e'];
+        let parts = [];
+        let raf = 0;
+        let W = 0;
+        let H = 0;
+        let last = 0;
+
+        // Half a bat (right wing), mirrored when drawn. Unit size, centred on the body.
+        const WING = [[0, -0.15], [0.12, -0.32], [0.18, -0.1], [0.6, -0.45], [1, -0.18], [0.8, 0.02], [0.75, 0.22], [0.6, 0.08], [0.5, 0.24], [0.36, 0.1], [0.2, 0.28], [0.1, 0.14], [0, 0.32]];
+
+        function bat(p) {
+          const flap = 0.55 + 0.45 * Math.abs(Math.sin(p.age * 14 + p.phase));
+          g.fillStyle = '#16140f';
+          for (const side of [1, -1]) {
+            g.beginPath();
+            WING.forEach(([x, y], i) => (i ? g.lineTo : g.moveTo).call(g, x * side, y * (i > 2 && i < 11 ? flap : 1)));
+            g.closePath();
+            g.fill();
+          }
+        }
+
+        function pumpkin() {
+          g.fillStyle = '#ff7a00';
+          g.strokeStyle = '#b84a00';
+          g.lineWidth = 0.05;
+          for (const [x, rx] of [[-0.28, 0.32], [0.28, 0.32], [0, 0.34]]) {
+            g.beginPath();
+            g.ellipse(x, 0.05, rx, 0.42, 0, 0, Math.PI * 2);
+            g.fill();
+            g.stroke();
+          }
+          g.fillStyle = '#3f7d1c';
+          g.fillRect(-0.06, -0.55, 0.12, 0.2);
+          // Jack-o'-lantern face.
+          g.fillStyle = '#16140f';
+          for (const s of [-1, 1]) {
+            g.beginPath();
+            g.moveTo(0.22 * s, -0.12);
+            g.lineTo(0.08 * s, 0.04);
+            g.lineTo(0.34 * s, 0.04);
+            g.fill();
+          }
+          g.beginPath();
+          g.moveTo(-0.32, 0.16);
+          g.lineTo(0.32, 0.16);
+          g.lineTo(0.2, 0.3);
+          g.lineTo(0.08, 0.22);
+          g.lineTo(-0.04, 0.32);
+          g.lineTo(-0.16, 0.22);
+          g.lineTo(-0.24, 0.3);
+          g.closePath();
+          g.fill();
+        }
+
+        function ghost(p) {
+          g.fillStyle = '#ffffff';
+          g.strokeStyle = '#16140f';
+          g.lineWidth = 0.07;
+          g.beginPath();
+          g.moveTo(-0.38, 0.45);
+          g.lineTo(-0.38, -0.05);
+          g.arc(0, -0.05, 0.38, Math.PI, 0);
+          g.lineTo(0.38, 0.45);
+          const wob = Math.sin(p.age * 8 + p.phase) * 0.06;
+          for (let i = 0; i < 4; i++) {
+            const x0 = 0.38 - i * 0.19;
+            g.quadraticCurveTo(x0 - 0.095, 0.3 + (i % 2 ? -wob : wob), x0 - 0.19, 0.45);
+          }
+          g.closePath();
+          g.fill();
+          g.stroke();
+          g.fillStyle = '#16140f';
+          for (const s of [-1, 1]) {
+            g.beginPath();
+            g.ellipse(0.14 * s, -0.08, 0.06, 0.1, 0, 0, Math.PI * 2);
+            g.fill();
+          }
+        }
+
+        function spawn() {
+          const unit = Math.min(W, H);
+          const list = [];
+          const add = (kind, x, y, vx, vy) => {
+            const big = kind !== 'paper';
+            list.push({
+              kind,
+              x,
+              y,
+              vx,
+              vy,
+              size: unit * (big ? 0.07 + Math.random() * 0.05 : 0.018 + Math.random() * 0.014),
+              rot: Math.random() * Math.PI * 2,
+              vr: (Math.random() - 0.5) * (big ? 3 : 12),
+              phase: Math.random() * 10,
+              color: PAPER[Math.floor(Math.random() * PAPER.length)],
+              age: 0,
+            });
+          };
+          const kinds = () => {
+            const r = Math.random();
+            return r < 0.8 ? 'paper' : r < 0.89 ? 'bat' : r < 0.95 ? 'pumpkin' : 'ghost';
+          };
+          // Cannon bursts from both bottom corners, then a shower from the top.
+          for (const side of [0, 1]) {
+            for (let i = 0; i < 70; i++) {
+              const a = (side ? -1 : 1) * (0.25 + Math.random() * 0.55);
+              const v = H * (0.9 + Math.random() * 0.4);
+              add(kinds(), side ? W : 0, H, Math.sin(a) * v * 0.9, -Math.cos(a) * v);
+            }
+          }
+          for (let i = 0; i < 80; i++) add(kinds(), Math.random() * W, -unit * 0.1 - Math.random() * H * 1.2, (Math.random() - 0.5) * 60, 40 + Math.random() * 80);
+          return list;
+        }
+
+        function frame(now) {
+          const dt = Math.min(0.05, (now - last) / 1000);
+          last = now;
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          g.clearRect(0, 0, canvas.width, canvas.height);
+          const dpr = canvas.width / W;
+          const grav = H * 0.9;
+          parts = parts.filter((p) => p.y < H + p.size * 2 && p.age < 9);
+          for (const p of parts) {
+            p.age += dt;
+            const flutter = p.kind === 'paper' ? 2.2 : p.kind === 'bat' ? 1.6 : 1.1;
+            p.vy += grav * dt;
+            // Air drag: terminal velocity keeps the fall slow and floaty.
+            const term = H * (p.kind === 'paper' ? 0.14 : 0.2);
+            if (p.vy > term) p.vy += (term - p.vy) * Math.min(1, dt * 8);
+            p.vx *= 1 - Math.min(1, dt * flutter);
+            p.x += (p.vx + Math.sin(p.age * 3 + p.phase) * H * 0.05) * dt;
+            p.y += p.vy * dt;
+            p.rot += p.vr * dt;
+
+            g.setTransform(dpr, 0, 0, dpr, p.x * dpr, p.y * dpr);
+            g.rotate(p.kind === 'paper' ? p.rot : Math.sin(p.rot) * 0.4);
+            if (p.kind === 'paper') {
+              g.fillStyle = p.color;
+              // Squash the height to fake the paper tumbling.
+              const h = p.size * 0.6 * Math.abs(Math.cos(p.age * 9 + p.phase)) + 0.5;
+              g.fillRect(-p.size / 2, -h / 2, p.size, h);
+              continue;
+            }
+            g.scale(p.size, p.size);
+            if (p.kind === 'bat') bat(p);
+            else if (p.kind === 'pumpkin') pumpkin();
+            else ghost(p);
+          }
+          if (parts.length) raf = requestAnimationFrame(frame);
+          else stop();
+        }
+
+        function start() {
+          stop();
+          W = stage.clientWidth;
+          H = stage.clientHeight;
+          const dpr = Math.min(2, window.devicePixelRatio || 1);
+          canvas.width = Math.round(W * dpr);
+          canvas.height = Math.round(H * dpr);
+          parts = spawn();
+          last = performance.now();
+          raf = requestAnimationFrame(frame);
+        }
+
+        function stop() {
+          cancelAnimationFrame(raf);
+          parts = [];
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          g.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        return { start, stop };
+      })();
+
       // ---------- random (always lands on 10) ----------
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -394,7 +652,8 @@
           await wait(i === steps ? 0 : 40 + 620 * t ** 3);
         }
 
-        fanfare();
+        celebrate();
+        confetti.start();
         pick.animate(
           [{ transform: 'scale(1)' }, { transform: 'scale(1.35) rotate(-6deg)' }, { transform: 'scale(0.95)' }, { transform: 'scale(1)' }],
           { duration: 600, easing: 'ease-out' },
@@ -413,6 +672,7 @@
         prime();
         openPicker(false);
         value = 0;
+        confetti.stop();
         burst.classList.remove('on');
         show('?', { dir: -1 });
         renderChips();
