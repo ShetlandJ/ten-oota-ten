@@ -225,11 +225,24 @@
           el.parentNode.appendChild(b);
         }
         function fail(msg) {
-          var gl = /webgl/i.test(msg || '');
+          msg = String(msg || '');
+          var gl = /webgl/i.test(msg);
           show(
             gl ? "Your phone couldn't start the 3D graphics." : "Couldn't load the A970.",
-            gl ? 'Close a few tabs or restart the browser, then try again.' : String(msg || '').replace(/^Uncaught (Error: )?/, '').slice(0, 160),
+            gl
+              // Chrome blocks 3D for a site after a graphics crash and only
+              // forgets when the whole browser restarts, so a reload won't do it.
+              ? 'Fully close your browser (swipe it away in recent apps, not just this tab), then open the link again.'
+              : msg.replace(/^Uncaught (Error: )?/, '').slice(0, 160),
           );
+          if (gl) {
+            var why = document.createElement('div');
+            why.className = 'splash-hint';
+            why.style.opacity = '0.6';
+            why.style.fontSize = '0.75em';
+            why.textContent = msg.replace(/^.*?WebGL unavailable: /, '').slice(0, 160);
+            document.getElementById('loading-text').parentNode.appendChild(why);
+          }
         }
         window.addEventListener('error', function (e) {
           var t = e.target;

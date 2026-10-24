@@ -20,8 +20,31 @@ document.body.classList.toggle('touch', isTouch);
 const lowPower = isTouch || (navigator.hardwareConcurrency || 8) <= 4;
 
 // ---- Renderer --------------------------------------------------------------
-const canvas = $('gl');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowPower || devicePixelRatio < 2, powerPreference: 'high-performance' });
+// Some phones refuse a context with these settings, or refuse the first ask while
+// memory is tight, so step down through simpler settings on a fresh canvas each time.
+// If Chrome has blocked 3D for the site (it does after a GPU crash, until the browser
+// restarts), say so: reloading alone won't fix that.
+function createRenderer() {
+  const attempts = [
+    { antialias: !lowPower || devicePixelRatio < 2, powerPreference: 'high-performance' },
+    { antialias: false, powerPreference: 'default' },
+    { antialias: false, powerPreference: 'low-power' },
+  ];
+  let reason = '';
+  for (const opts of attempts) {
+    const c = $('gl');
+    c.addEventListener('webglcontextcreationerror', (e) => { reason = e.statusMessage || reason; }, { once: true });
+    try {
+      return new THREE.WebGLRenderer({ canvas: c, ...opts });
+    } catch (err) {
+      reason = reason || err.message;
+      const fresh = c.cloneNode(false);
+      c.replaceWith(fresh);
+    }
+  }
+  throw new Error(`WebGL unavailable: ${reason || 'unknown'}`);
+}
+const renderer = createRenderer();
 renderer.setPixelRatio(Math.min(devicePixelRatio, lowPower ? 1.5 : 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
