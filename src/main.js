@@ -45,7 +45,7 @@ function createRenderer() {
   throw new Error(`WebGL unavailable: ${reason || 'unknown'}`);
 }
 const renderer = createRenderer();
-renderer.setPixelRatio(Math.min(devicePixelRatio, lowPower ? 1.5 : 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, lowPower ? 1.25 : 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -72,7 +72,7 @@ scene.add(terrain.buildMesh());
 scene.add(terrain.buildSea());
 scene.add(terrain.buildLochs(data.lochs || []));
 scene.add(buildRoad(road, terrain, data));
-const scenery = buildScenery(road, terrain, data);
+const scenery = buildScenery(road, terrain, data, undefined, { lowPower });
 scene.add(scenery.group);
 const sky = new Sky(scene, 'a970', { shadows: true, shadowSize: lowPower ? 1024 : 2048 });
 
@@ -212,6 +212,22 @@ function togglePause(on) {
 }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) togglePause(true);
+});
+
+// three.js asks the browser to restore a lost context, which can take a moment.
+// If it doesn't come back, say so rather than leave a black screen under the HUD.
+let glLostTimer = 0;
+renderer.domElement.addEventListener('webglcontextlost', () => {
+  togglePause(true);
+  glLostTimer = setTimeout(() => {
+    $('screen-pause').hidden = true;
+    $('screen-gl-lost').hidden = false;
+  }, 2000);
+});
+renderer.domElement.addEventListener('webglcontextrestored', () => {
+  clearTimeout(glLostTimer);
+  $('screen-gl-lost').hidden = true;
+  $('screen-pause').hidden = game.state !== 'paused';
 });
 
 // ---- Loop --------------------------------------------------------------------

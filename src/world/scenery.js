@@ -8,7 +8,7 @@ const WALL_COLOURS = ['#f3f1ea', '#ece7da', '#f7f5ef', '#e3ddcf', '#d9d6cc'];
 const ROOF_COLOURS = ['#3e444b', '#474c52', '#353a40', '#5a3a30'];
 const SHED_COLOURS = ['#8d3b2f', '#5f7357', '#7b7f84', '#3f5e74'];
 
-export function buildScenery(road, terrain, data, seed = 'scenery') {
+export function buildScenery(road, terrain, data, seed = 'scenery', { lowPower = false } = {}) {
   const rng = new Rng(seed);
   const group = new THREE.Group();
   const mat = lambert();
@@ -26,7 +26,7 @@ export function buildScenery(road, terrain, data, seed = 'scenery') {
   group.add(signs(road, data));
   const sheep = flock(road, terrain, rng, obstacles, mat);
   group.add(sheep);
-  group.add(tussocks(road, terrain, data, rng, obstacles));
+  group.add(tussocks(road, terrain, data, rng, obstacles, lowPower));
   return { group, sheep };
 }
 
@@ -515,7 +515,7 @@ function tussockGeometry() {
   ]);
 }
 
-function tussocks(road, terrain, data, rng, obstacles) {
+function tussocks(road, terrain, data, rng, obstacles, lowPower) {
   // Keep off side roads, lay-bys and bus stops
   const keepOut = [];
   for (const sr of data.sideRoads || []) {
@@ -564,8 +564,15 @@ function tussocks(road, terrain, data, rng, obstacles) {
       if (y < 2) continue;
       // The verge is graded to the road; don't leave clumps hanging off a cutting
       if (off < 7) y = Math.max(y, road.heightAt(s) - 0.25);
-      spots.push({ x: p.x, y: y - 0.05, z: p.z, rot: rng.range(0, Math.PI * 2), sc: rng.range(0.9, 1.7), sy: rng.range(0.75, 1.3), col: rng.pick(TUSSOCK_COLOURS) });
+      spots.push({ x: p.x, y: y - 0.05, z: p.z, off, rot: rng.range(0, Math.PI * 2), sc: rng.range(0.9, 1.7), sy: rng.range(0.75, 1.3), col: rng.pick(TUSSOCK_COLOURS) });
     }
+  }
+  // ~7000 clumps was over 100k triangles a frame, enough for weaker phone GPUs to
+  // reset mid-game. On phones keep half the verge and a fifth of the field.
+  if (lowPower) {
+    const kept = spots.filter((p, i) => i % (p.off < ROAD.halfWidth + 4 ? 2 : 5) === 0);
+    spots.length = 0;
+    spots.push(...kept);
   }
   const im = new THREE.InstancedMesh(tussockGeometry(), lambert(), spots.length);
   const dummy = new THREE.Object3D();
