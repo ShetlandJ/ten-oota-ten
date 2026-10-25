@@ -113,7 +113,7 @@ export class Terrain {
     return this.roadDist[r * this.cols + c];
   }
 
-  buildMesh() {
+  buildMesh({ detail = true } = {}) {
     const { cols, rows, cell, minX, minZ, h } = this;
     const tris = (cols - 1) * (rows - 1) * 2;
     const pos = new Float32Array(tris * 9);
@@ -170,7 +170,7 @@ export class Terrain {
     g.computeVertexNormals();
     const mesh = new THREE.Mesh(
       g,
-      new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: grassDetail() }),
+      new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: detail ? grassDetail() : null }),
     );
     mesh.receiveShadow = true;
     mesh.matrixAutoUpdate = false;

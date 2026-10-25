@@ -68,7 +68,7 @@ if (!res.ok) throw new Error(`The road data didn't download (${res.status}).`);
 const data = await res.json();
 const road = new Road(data);
 const terrain = new Terrain(data);
-scene.add(terrain.buildMesh());
+scene.add(terrain.buildMesh({ detail: !lowPower })); // see buildScenery
 scene.add(terrain.buildSea());
 scene.add(terrain.buildLochs(data.lochs || []));
 scene.add(buildRoad(road, terrain, data));

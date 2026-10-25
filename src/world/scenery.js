@@ -26,7 +26,9 @@ export function buildScenery(road, terrain, data, seed = 'scenery', { lowPower =
   group.add(signs(road, data));
   const sheep = flock(road, terrain, rng, obstacles, mat);
   group.add(sheep);
-  group.add(tussocks(road, terrain, data, rng, obstacles, lowPower));
+  // Since the clumps and the grass texture went in, phones crash the GPU on the
+  // first frames (Chrome then blocks 3D for the site), so phones go without both.
+  if (!lowPower) group.add(tussocks(road, terrain, data, rng, obstacles));
   return { group, sheep };
 }
 
@@ -515,7 +517,7 @@ function tussockGeometry() {
   ]);
 }
 
-function tussocks(road, terrain, data, rng, obstacles, lowPower) {
+function tussocks(road, terrain, data, rng, obstacles) {
   // Keep off side roads, lay-bys and bus stops
   const keepOut = [];
   for (const sr of data.sideRoads || []) {
@@ -564,15 +566,8 @@ function tussocks(road, terrain, data, rng, obstacles, lowPower) {
       if (y < 2) continue;
       // The verge is graded to the road; don't leave clumps hanging off a cutting
       if (off < 7) y = Math.max(y, road.heightAt(s) - 0.25);
-      spots.push({ x: p.x, y: y - 0.05, z: p.z, off, rot: rng.range(0, Math.PI * 2), sc: rng.range(0.9, 1.7), sy: rng.range(0.75, 1.3), col: rng.pick(TUSSOCK_COLOURS) });
+      spots.push({ x: p.x, y: y - 0.05, z: p.z, rot: rng.range(0, Math.PI * 2), sc: rng.range(0.9, 1.7), sy: rng.range(0.75, 1.3), col: rng.pick(TUSSOCK_COLOURS) });
     }
-  }
-  // ~7000 clumps was over 100k triangles a frame, enough for weaker phone GPUs to
-  // reset mid-game. On phones keep half the verge and a fifth of the field.
-  if (lowPower) {
-    const kept = spots.filter((p, i) => i % (p.off < ROAD.halfWidth + 4 ? 2 : 5) === 0);
-    spots.length = 0;
-    spots.push(...kept);
   }
   const im = new THREE.InstancedMesh(tussockGeometry(), lambert(), spots.length);
   const dummy = new THREE.Object3D();
